@@ -15,9 +15,10 @@ echo "3) 🚀 Crawl tùy chọn (Nhập số trang & chuyên mục)"
 echo "4) 📺 Khởi chạy Web Server xem phim nội bộ (Port 8089)"
 echo "5) 📑 Xuất lại file CSV chuẩn phim (movies.csv)"
 echo "6) 🎞️ Bóc tách toàn bộ danh sách tập ra file CSV (episodes.csv)"
+echo "7) 📥 Tạo lại trang tải phim (download.html)"
 echo "0) Thoát"
 echo "================================================================="
-read -p "Chọn chức năng [1-6]: " choice
+read -p "Chọn chức năng [1-7]: " choice
 
 case $choice in
     1)
@@ -58,6 +59,9 @@ case $choice in
         ;;
     6)
         python3 export_episodes_csv.py
+        ;;
+    7)
+        python3 generate_downloader.py
         ;;
     *)
         echo "Tạm biệt!"

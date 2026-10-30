@@ -77,14 +77,20 @@ def run():
     if os.path.exists(gen_script):
         os.system(f"python3 {gen_script}")
 
+    gen_dl = os.path.join(DIRECTORY, "generate_downloader.py")
+    if os.path.exists(gen_dl):
+        os.system(f"python3 {gen_dl}")
+
     lan_ip = get_lan_ip()
 
     try:
         with ThreadingHTTPServer(("", PORT), Handler) as httpd:
             print("=" * 65)
             print("🎉 MÁY CHỦ ANIMEVIETSUB WEB NỘI BỘ ĐANG CHẠY!")
-            print(f"👉 Trên máy tính:              http://localhost:{PORT}")
+            print(f"👉 Trang xem phim (PC):        http://localhost:{PORT}")
+            print(f"👉 Trang tải phim (PC):        http://localhost:{PORT}/download.html")
             print(f"👉 Trên điện thoại (WiFi):      http://{lan_ip}:{PORT}")
+            print(f"👉 Trang tải trên ĐT:          http://{lan_ip}:{PORT}/download.html")
             print(f"📁 Thư mục phục vụ:            {DIRECTORY}")
             print("=" * 65)
             print("Nhấn Ctrl + C để dừng máy chủ")
@@ -92,7 +98,8 @@ def run():
     except OSError as e:
         if e.errno == 98:
             print(f"ℹ️ Máy chủ ĐÃ ĐANG CHẠY SẴN trên cổng {PORT}!")
-            print(f"👉 Mở tại: http://localhost:{PORT} hoặc http://{lan_ip}:{PORT}")
+            print(f"👉 Xem phim: http://localhost:{PORT} hoặc http://{lan_ip}:{PORT}")
+            print(f"👉 Tải phim: http://localhost:{PORT}/download.html hoặc http://{lan_ip}:{PORT}/download.html")
         else:
             raise e
 

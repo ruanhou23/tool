@@ -64,9 +64,12 @@
         </div>
       </div>
 
-      <!-- Quick Stats -->
-      <div class="flex items-center gap-2 text-xs font-medium">
-        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2">
+        <a href="download.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 text-xs font-bold transition-all shadow-md">
+          <span>📥</span> <span>Trang tải phim</span>
+        </a>
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs font-medium">
           <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span id="stat-count" class="font-bold text-white">0</span> phim
         </div>
@@ -142,6 +145,12 @@
           <span id="cinema-ep" class="text-slate-400 font-medium shrink-0">Tập --</span>
         </div>
         <div class="flex items-center gap-2">
+          <button 
+            type="button" 
+            onclick="openDownloadPage()" 
+            class="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 text-xs font-bold border border-emerald-500/50 flex items-center gap-1 active:scale-95 transition-all shadow-sm">
+            <span>📥</span> Tải tập này
+          </button>
           <button 
             type="button" 
             onclick="reloadCinemaIframe()" 
@@ -584,6 +593,15 @@
       navigator.clipboard.writeText(code).then(() => {
         showToast("Đã chép mã iframe vào Clipboard!");
       });
+    }
+
+    function openDownloadPage() {
+      if (!currentItem) {
+        window.location.href = "download.html";
+        return;
+      }
+      const streamUrl = (cinemaIframe && cinemaIframe.src) ? cinemaIframe.src : (currentItem.embed_url || currentItem.watch_url);
+      window.location.href = `download.html?url=${encodeURIComponent(streamUrl)}&id=${encodeURIComponent(currentItem.id)}&ep=${encodeURIComponent(currentEpisode || '')}`;
     }
 
     function showToast(msg) {
