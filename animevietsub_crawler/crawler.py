@@ -66,6 +66,10 @@ class AnimeVietSubCrawler:
 
     def fetch_html(self, url, retries=3):
         """Tải mã nguồn HTML từ URL có xử lý Cookie và Retry."""
+        if not url:
+            return None
+        # Chuẩn hóa mọi biến thể domain cũ về BASE_URL chính
+        url = re.sub(r'^https?://animevietsub\.[a-z0-9]+', BASE_URL, url)
         if url.startswith("/"):
             url = f"{BASE_URL}{url}"
 
@@ -227,13 +231,16 @@ class AnimeVietSubCrawler:
                 details["genres"] = ", ".join(unique_g[:6])
 
         # 6. Danh sách các tập phim (Episodes)
-        ep_matches = re.findall(r'<a[^>]*href=[\"\'](https?://animevietsub\.[a-z]+/phim/[^\"\']+/tap-(\d+)-(\d+)\.html)[\"\'][^>]*>(.*?)</a>', content)
+        ep_matches = re.findall(r'<a[^>]*href=[\"\']((?:https?://animevietsub\.[a-z0-9]+)?/phim/[^\"\']+/tap-(\d+)-(\d+)\.html)[\"\'][^>]*>(.*?)</a>', content)
         episodes = []
         for ep_url, ep_num, ep_id, ep_label in ep_matches:
+            clean_url = re.sub(r'^https?://animevietsub\.[a-z0-9]+', BASE_URL, ep_url)
+            if clean_url.startswith("/"):
+                clean_url = f"{BASE_URL}{clean_url}"
             episodes.append({
                 "episode": ep_num,
                 "id": ep_id,
-                "url": ep_url,
+                "url": clean_url,
                 "label": ep_label.strip()
             })
 
@@ -246,6 +253,9 @@ class AnimeVietSubCrawler:
 
     def fetch_stream_embed(self, watch_url):
         """Bóc tách link Stream Embed Player từ biến window.PLAYER_DATA."""
+        if not watch_url:
+            return ""
+        watch_url = re.sub(r'^https?://animevietsub\.[a-z0-9]+', BASE_URL, watch_url)
         content = self.fetch_html(watch_url)
         if not content:
             return ""
@@ -265,7 +275,7 @@ class AnimeVietSubCrawler:
 
         return ""
 
-    def crawl(self, pages=1, category="anime-moi", fetch_details=False, fetch_stream=False, max_workers=6):
+    def crawl(self, pages=1, category="anime-moi", fetch_details=False, fetch_stream=False, max_workers=3):
         """
         Thu thập toàn bộ dữ liệu anime theo số trang chỉ định.
         """
@@ -303,13 +313,18 @@ class AnimeVietSubCrawler:
 
             def detail_worker(idx, item):
                 det = self.fetch_movie_details(item["url"])
+                time.sleep(0.25)
                 stream_url = ""
                 if fetch_stream:
                     # Lấy link stream tập mới nhất
-                    latest_ep_url = item["watch_url"]
+                    latest_ep_url = item.get("watch_url", "")
                     if det.get("episodes"):
                         latest_ep_url = det["episodes"][-1]["url"]
-                    stream_url = self.fetch_stream_embed(latest_ep_url)
+                    if latest_ep_url:
+                        stream_url = self.fetch_stream_embed(latest_ep_url)
+                    # Nếu chưa lấy được từ tập, thử qua watch_url
+                    if not stream_url and item.get("watch_url") and item["watch_url"] != latest_ep_url:
+                        stream_url = self.fetch_stream_embed(item["watch_url"])
                 return idx, det, stream_url
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
