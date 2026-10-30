@@ -3,3 +3,6 @@ node_modules/
 
 __pycache__/
 *.pyc
+
+hentaivs_crawler/cert.crt
+hentaivs_crawler/cert.key
