@@ -10,7 +10,7 @@ html_content = f"""<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HentaiVS Catalog Explorer (2,867+ Phim)</title>
+  <title>HentaiVS Catalog & Cinema Player (2,867+ Phim)</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     body {{
@@ -46,19 +46,19 @@ html_content = f"""<!DOCTYPE html>
 </head>
 <body class="min-h-screen pb-16 antialiased selection:bg-rose-500 selection:text-white">
 
-  <!-- Header & Hero -->
+  <!-- Header -->
   <header class="border-b border-slate-800/80 bg-slate-950/80 sticky top-0 z-40 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <div class="size-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-950/40 text-xl font-bold">
-          ⚡
+          🎬
         </div>
         <div>
           <h1 class="text-lg font-bold leading-none tracking-tight text-white flex items-center gap-2">
-            HentaiVS Catalog
-            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Toàn bộ 120 trang</span>
+            HentaiVS Cinema
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Xem trực tiếp nội bộ</span>
           </h1>
-          <p class="text-xs text-slate-400 mt-0.5">Khám phá toàn bộ kho phim & Stream View</p>
+          <p class="text-xs text-slate-400 mt-0.5">Khung phát video trực tiếp & Kho 2.867 tập phim</p>
         </div>
       </div>
 
@@ -73,6 +73,59 @@ html_content = f"""<!DOCTYPE html>
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    <!-- Top Cinema Player Frame (Khung xem phim trực tiếp trên đầu trang) -->
+    <section id="cinema-section" class="mb-8 rounded-3xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-md">
+      <div class="p-4 sm:p-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-950/60">
+        <div class="flex items-center gap-2.5">
+          <span class="size-3 rounded-full bg-rose-500 animate-pulse"></span>
+          <h2 id="cinema-title" class="text-base sm:text-lg font-bold text-white tracking-tight">📺 Khung phát video trực tiếp</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="cinema-badge" class="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold">Sẵn sàng phát</span>
+          <button 
+            type="button" 
+            onclick="copyEmbedCode()"
+            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700 font-medium transition-all active:scale-95 flex items-center gap-1.5"
+            title="Sao chép mã iframe để nhúng sang trang web khác"
+          >
+            📋 Lấy mã iframe
+          </button>
+        </div>
+      </div>
+
+      <!-- Khung hiển thị Video Iframe -->
+      <div class="relative w-full aspect-video sm:aspect-[21/9] max-h-[560px] bg-black flex items-center justify-center overflow-hidden">
+        <iframe 
+          id="cinema-iframe" 
+          class="w-full h-full border-0 hidden" 
+          allow="autoplay; fullscreen; picture-in-picture" 
+          allowfullscreen>
+        </iframe>
+        
+        <div id="cinema-placeholder" class="text-center p-6 sm:p-8">
+          <div class="size-16 sm:size-20 rounded-2xl bg-slate-900 border border-slate-800 mx-auto flex items-center justify-center text-3xl sm:text-4xl mb-4 shadow-xl shadow-rose-950/30 text-rose-500 animate-bounce">
+            ▶
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-white">Chưa chọn phim để phát</h3>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1 max-w-md mx-auto">
+            Bấm vào bất kỳ bộ phim nào bên dưới danh sách để phát trực tiếp ngay trên khung này!
+          </p>
+        </div>
+      </div>
+
+      <div id="cinema-info-bar" class="p-4 sm:p-5 bg-slate-950/70 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+        <div class="text-slate-300">
+          <span id="cinema-studio" class="text-rose-400 font-semibold mr-3">Studio: Majin</span>
+          <span id="cinema-ep" class="text-slate-400 font-medium">Tập 1</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <a id="cinema-ext-link" href="#" target="_blank" rel="noopener noreferrer" class="text-rose-400 hover:text-rose-300 font-medium hover:underline flex items-center gap-1">
+            <span>Mở trang gốc</span> ↗
+          </a>
+        </div>
+      </div>
+    </section>
 
     <!-- Filter Bar -->
     <section class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 mb-8 backdrop-blur-md shadow-xl shadow-black/20">
@@ -119,7 +172,7 @@ html_content = f"""<!DOCTYPE html>
     <section>
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <span>Kết quả tìm thấy:</span>
+          <span>Danh sách phim:</span>
           <span id="filtered-count" class="text-white font-bold bg-slate-800 px-2.5 py-0.5 rounded-full text-xs">0</span>
         </h2>
         <span id="rendered-info" class="text-xs text-slate-500"></span>
@@ -161,209 +214,161 @@ html_content = f"""<!DOCTYPE html>
         </svg>
       </button>
 
-      <!-- Backdrop banner -->
-      <div class="relative aspect-video sm:aspect-[21/9] w-full bg-slate-950 overflow-hidden">
-        <img id="modal-backdrop" class="size-full object-cover object-center opacity-70" src="" alt="Backdrop">
-        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
+      <!-- Video Player Frame in Modal -->
+      <div class="relative aspect-video w-full bg-black overflow-hidden">
+        <iframe id="modal-iframe" class="size-full border-0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
         
-        <!-- Video Player Overlay -->
-        <div id="modal-player-container" class="absolute inset-0 hidden z-10 bg-black">
-          <iframe id="modal-iframe" class="size-full border-0" allow="autoplay; fullscreen" allowfullscreen></iframe>
-        </div>
-
-        <div id="modal-play-trigger" class="absolute inset-0 flex items-center justify-center z-10 hidden">
-          <button 
-            onclick="playModalVideo()"
-            class="size-16 sm:size-20 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-2xl shadow-rose-600/50 hover:bg-rose-500 hover:scale-110 active:scale-95 transition-all">
-            <svg class="size-8 sm:size-9 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Badges on banner -->
-        <div class="absolute bottom-4 left-4 right-4 flex flex-wrap items-center gap-2">
-          <span id="modal-ep" class="px-2.5 py-1 rounded-md bg-rose-600 text-white font-bold text-xs">Tập 1</span>
-          <span id="modal-year" class="px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-700 text-slate-300 font-semibold text-xs">HD</span>
+        <div id="modal-player-fallback" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 p-6 text-center hidden">
+          <p class="text-sm text-slate-400 mb-3">Tập này chưa có mã video stream trực tiếp.</p>
+          <a id="modal-fallback-link" href="#" target="_blank" class="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-semibold text-sm">Xem trên trang web gốc</a>
         </div>
       </div>
 
       <!-- Modal Body -->
-      <div class="p-5 sm:p-7 space-y-6">
+      <div class="p-5 sm:p-7 space-y-5">
         <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span id="modal-ep" class="px-2.5 py-1 rounded-md bg-rose-600 text-white font-bold text-xs">Tập 1</span>
+            <span id="modal-year" class="px-2.5 py-1 rounded-md bg-slate-950/80 border border-slate-700 text-slate-300 font-semibold text-xs">HD</span>
+          </div>
           <h2 id="modal-title" class="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight">Tên phim</h2>
           <p id="modal-studio" class="text-sm text-rose-400 font-medium mt-1">Studio</p>
         </div>
 
         <!-- Action Links -->
         <div class="flex flex-wrap items-center gap-2.5 pt-1">
+          <button 
+            type="button" 
+            onclick="playInHeroFrame()" 
+            class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-950/40 transition-all active:scale-95 flex items-center gap-2">
+            <span>📺 Đưa lên khung trên</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="copyCurrentEmbedIframe()" 
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all active:scale-95 flex items-center gap-2">
+            <span>📋 Copy mã Iframe</span>
+          </button>
           <a 
             id="modal-watch-link" 
             href="#" 
-            target="_blank"
-            class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-rose-950/50 transition-all">
-            <span>Trang xem HentaiVS gốc</span>
-            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-medium border border-slate-800 transition-all active:scale-95 flex items-center gap-1.5">
+            <span>Mở web gốc</span> ↗
           </a>
-
-          <a 
-            id="modal-embed-ext" 
-            href="#" 
-            target="_blank"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium flex items-center gap-2 transition-all hidden">
-            <span>Mở Tab Embed</span>
-            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-          </a>
-
-          <button 
-            onclick="copyCurrentLink()"
-            class="px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 text-sm font-medium flex items-center gap-2 transition-all ml-auto">
-            <span>📋 Copy Link</span>
-          </button>
         </div>
 
         <!-- Description -->
-        <div>
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">📖 Thông tin chi tiết</h3>
-          <div id="modal-desc" class="text-sm text-slate-300 leading-relaxed bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80 whitespace-pre-line max-h-48 overflow-y-auto">
-            Chưa có mô tả.
-          </div>
+        <div id="modal-desc" class="text-sm text-slate-300 leading-relaxed bg-slate-950/50 p-4 rounded-2xl border border-slate-800/60 max-h-48 overflow-y-auto">
+          Mô tả phim...
         </div>
-
       </div>
     </div>
   </div>
 
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-4 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-sm shadow-xl flex items-center gap-2">
+    <span>✓</span> <span id="toast-msg">Đã sao chép!</span>
+  </div>
+
   <script>
     const RAW_DATA = {json.dumps(crawled_data, ensure_ascii=False)};
-
-    let currentItem = null;
-    let filteredList = [];
+    let filteredList = [...RAW_DATA];
     let displayedCount = 0;
     const PAGE_SIZE = 48;
+    let currentItem = null;
 
     // Elements
     const grid = document.getElementById("movie-grid");
+    const statCount = document.getElementById("stat-count");
+    const filteredCount = document.getElementById("filtered-count");
+    const renderedInfo = document.getElementById("rendered-info");
+    const loadMoreContainer = document.getElementById("load-more-container");
     const emptyState = document.getElementById("empty-state");
     const searchInput = document.getElementById("search-input");
     const studioSelect = document.getElementById("studio-select");
     const sortSelect = document.getElementById("sort-select");
-    const filteredCount = document.getElementById("filtered-count");
-    const renderedInfo = document.getElementById("rendered-info");
-    const statCount = document.getElementById("stat-count");
-    const loadMoreContainer = document.getElementById("load-more-container");
+
+    // Hero Cinema elements
+    const cinemaSection = document.getElementById("cinema-section");
+    const cinemaTitle = document.getElementById("cinema-title");
+    const cinemaStudio = document.getElementById("cinema-studio");
+    const cinemaEp = document.getElementById("cinema-ep");
+    const cinemaIframe = document.getElementById("cinema-iframe");
+    const cinemaPlaceholder = document.getElementById("cinema-placeholder");
+    const cinemaExtLink = document.getElementById("cinema-ext-link");
+    const cinemaBadge = document.getElementById("cinema-badge");
 
     // Modal elements
     const modal = document.getElementById("detail-modal");
     const modalTitle = document.getElementById("modal-title");
     const modalStudio = document.getElementById("modal-studio");
-    const modalBackdrop = document.getElementById("modal-backdrop");
     const modalDesc = document.getElementById("modal-desc");
     const modalEp = document.getElementById("modal-ep");
     const modalWatchLink = document.getElementById("modal-watch-link");
-    const modalEmbedExt = document.getElementById("modal-embed-ext");
-    const modalPlayerContainer = document.getElementById("modal-player-container");
     const modalIframe = document.getElementById("modal-iframe");
-    const modalPlayTrigger = document.getElementById("modal-play-trigger");
+    const modalFallback = document.getElementById("modal-player-fallback");
+    const modalFallbackLink = document.getElementById("modal-fallback-link");
 
-    function initFilters() {{
-      const studiosSet = new Set();
-      RAW_DATA.forEach(item => {{
-        if (item.studios) {{
-          item.studios.split(",").forEach(s => studiosSet.add(s.trim()));
+    // Init
+    statCount.textContent = RAW_DATA.length.toLocaleString('vi-VN');
+    initStudioOptions();
+    applyFilters();
+
+    function initStudioOptions() {{
+      const studioMap = new Map();
+      RAW_DATA.forEach(x => {{
+        if (x.studios) {{
+          x.studios.split(",").map(s => s.trim()).filter(Boolean).forEach(s => {{
+            studioMap.set(s, (studioMap.get(s) || 0) + 1);
+          }});
         }}
       }});
 
-      statCount.textContent = RAW_DATA.length.toLocaleString('vi-VN');
-
-      Array.from(studiosSet).sort().forEach(s => {{
-        if (!s) return;
+      const sortedStudios = Array.from(studioMap.entries()).sort((a, b) => b[1] - a[1]);
+      sortedStudios.forEach(([studio, count]) => {{
         const opt = document.createElement("option");
-        opt.value = s;
-        opt.textContent = s;
+        opt.value = studio;
+        opt.textContent = `${{studio}} (${{count}})`;
         studioSelect.appendChild(opt);
       }});
     }}
 
-    function getFilteredData() {{
-      const query = searchInput.value.toLowerCase().trim();
-      const selStudio = studioSelect.value;
-      const sortBy = sortSelect.value;
+    function applyFilters() {{
+      const query = (searchInput.value || "").toLowerCase().trim();
+      const studio = studioSelect.value;
+      const sort = sortSelect.value;
 
-      let list = RAW_DATA.filter(item => {{
-        if (query) {{
-          const matchTitle = (item.title || "").toLowerCase().includes(query);
-          const matchStudio = (item.studios || "").toLowerCase().includes(query);
-          const matchSlug = (item.slug || "").toLowerCase().includes(query);
-          if (!matchTitle && !matchStudio && !matchSlug) return false;
-        }}
-        if (selStudio && !(item.studios || "").includes(selStudio)) return false;
-        return true;
+      filteredList = RAW_DATA.filter(item => {{
+        const matchQuery = !query || 
+          (item.title && item.title.toLowerCase().includes(query)) ||
+          (item.studios && item.studios.toLowerCase().includes(query)) ||
+          (item.description && item.description.toLowerCase().includes(query)) ||
+          (item.slug && item.slug.toLowerCase().includes(query));
+
+        const matchStudio = !studio || (item.studios && item.studios.includes(studio));
+        return matchQuery && matchStudio;
       }});
 
-      if (sortBy === "title-asc") list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-      if (sortBy === "title-desc") list.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
-      if (sortBy === "ep-desc") list.sort((a, b) => (parseInt(b.episode) || 0) - (parseInt(a.episode) || 0));
+      if (sort === "title-asc") {{
+        filteredList.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+      }} else if (sort === "title-desc") {{
+        filteredList.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+      }} else if (sort === "ep-desc") {{
+        filteredList.sort((a, b) => (parseInt(b.episode) || 0) - (parseInt(a.episode) || 0));
+      }}
 
-      return list;
-    }}
-
-    function renderCard(item) {{
-      const card = document.createElement("div");
-      card.className = "group relative bg-slate-900/70 border border-slate-800 rounded-2xl overflow-hidden hover:border-rose-500/60 hover:shadow-xl hover:shadow-rose-950/20 transition-all duration-300 flex flex-col cursor-pointer";
-      card.onclick = () => openModal(item);
-
-      const posterSrc = item.poster_url || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500&auto=format&fit=crop&q=60";
-
-      card.innerHTML = `
-        <div class="relative aspect-[3/4] w-full bg-slate-950 overflow-hidden">
-          <img 
-            src="${{posterSrc}}" 
-            alt="${{item.title}}"
-            loading="lazy"
-            class="size-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onerror="this.src='https://images.unsplash.com/photo-1578632767115-351597cf2477?w=500&auto=format&fit=crop&q=60'"
-          />
-          <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80"></div>
-          
-          <div class="absolute top-2 left-2 flex flex-col gap-1">
-            <span class="px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold text-[11px] shadow">
-              Tập ${{item.episode || '1'}}
-            </span>
-          </div>
-
-          <div class="absolute top-2 right-2">
-            <span class="px-2 py-0.5 rounded-md bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-amber-300 font-bold text-[10px]">
-              HD
-            </span>
-          </div>
-        </div>
-
-        <div class="p-3 flex-1 flex flex-col justify-between">
-          <h3 class="text-xs sm:text-sm font-bold text-white line-clamp-2 group-hover:text-rose-400 transition-colors" title="${{item.title}}">
-            ${{item.title}}
-          </h3>
-          ${{item.studios ? `<p class="text-[11px] text-slate-400 font-medium mt-1 truncate">🏢 ${{item.studios}}</p>` : ''}}
-        </div>
-      `;
-      return card;
-    }}
-
-    function applyFilterAndReset() {{
-      filteredList = getFilteredData();
       filteredCount.textContent = filteredList.length.toLocaleString('vi-VN');
-      displayedCount = 0;
       grid.innerHTML = "";
+      displayedCount = 0;
+      loadMore();
 
       if (filteredList.length === 0) {{
         emptyState.classList.remove("hidden");
-        loadMoreContainer.classList.add("hidden");
-        renderedInfo.textContent = "";
-        return;
+      }} else {{
+        emptyState.classList.add("hidden");
       }}
-      emptyState.classList.add("hidden");
-
-      loadMore();
     }}
 
     function loadMore() {{
@@ -386,26 +391,122 @@ html_content = f"""<!DOCTYPE html>
       }}
     }}
 
+    function renderCard(item) {{
+      const card = document.createElement("div");
+      card.className = "group relative bg-slate-900/80 rounded-2xl overflow-hidden border border-slate-800/80 hover:border-rose-500/50 hover:shadow-xl hover:shadow-rose-950/30 transition-all duration-300 flex flex-col cursor-pointer";
+      
+      const poster = item.poster_url || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400";
+      const hasEmbed = !!item.video_id;
+
+      card.innerHTML = `
+        <div class="relative aspect-[3/4] w-full bg-slate-950 overflow-hidden">
+          <img 
+            src="${{poster}}" 
+            alt="${{item.title}}" 
+            loading="lazy"
+            class="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onerror="this.src='https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400'"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity"></div>
+          
+          <!-- Badges -->
+          <div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+            <span class="px-2 py-0.5 rounded-md bg-rose-600/90 text-[11px] font-bold text-white shadow">
+              Tập ${{item.episode || '1'}}
+            </span>
+          </div>
+
+          ${{hasEmbed ? `
+          <div class="absolute bottom-2.5 right-2.5">
+            <span class="px-2 py-0.5 rounded-md bg-emerald-500/90 text-[10px] font-bold text-slate-950 flex items-center gap-1 shadow">
+              <span>▶</span> Xem ngay
+            </span>
+          </div>` : ''}}
+        </div>
+
+        <div class="p-3 flex-1 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-100 group-hover:text-rose-400 transition-colors line-clamp-2 leading-snug">
+              ${{item.title}}
+            </h3>
+            <p class="text-[11px] text-slate-400 mt-1 truncate">
+              ${{item.studios || "Hoạt hình"}}
+            </p>
+          </div>
+        </div>
+      `;
+
+      card.onclick = () => selectMovie(item);
+      return card;
+    }}
+
+    function getPlayerUrl(item) {{
+      if (item.video_id) {{
+        return `/embed?v=${{encodeURIComponent(item.video_id)}}`;
+      }}
+      if (item.embed_url) {{
+        return item.embed_url;
+      }}
+      return "";
+    }}
+
+    function selectMovie(item) {{
+      currentItem = item;
+      // Phát trực tiếp trên Khung Video Player trên đầu trang
+      playInHeroFrame(item);
+      // Mở modal nếu màn hình nhỏ (mobile) hoặc tự động cuộn lên
+      if (window.innerWidth < 640) {{
+        openModal(item);
+      }} else {{
+        cinemaSection.scrollIntoView({{ behavior: "smooth", block: "start" }});
+      }}
+    }}
+
+    function playInHeroFrame(item) {{
+      if (!item) item = currentItem;
+      if (!item) return;
+
+      const playerUrl = getPlayerUrl(item);
+      cinemaTitle.textContent = `${{item.title}} - Tập ${{item.episode || '1'}}`;
+      cinemaStudio.textContent = `Studio: ${{item.studios || 'Hoạt hình'}}`;
+      cinemaEp.textContent = `Tập ${{item.episode || '1'}}`;
+      cinemaExtLink.href = item.watch_url || '#';
+
+      if (playerUrl) {{
+        cinemaIframe.src = playerUrl;
+        cinemaIframe.classList.remove("hidden");
+        cinemaPlaceholder.classList.add("hidden");
+        cinemaBadge.textContent = "Đang phát";
+        cinemaBadge.className = "px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold";
+      }} else {{
+        cinemaIframe.classList.add("hidden");
+        cinemaPlaceholder.classList.remove("hidden");
+        cinemaBadge.textContent = "Chưa có stream";
+      }}
+
+      closeModal();
+      cinemaSection.scrollIntoView({{ behavior: "smooth", block: "start" }});
+    }}
+
     function openModal(item) {{
       currentItem = item;
-      modalTitle.textContent = item.title;
+      modalTitle.textContent = `${{item.title}} - Tập ${{item.episode || '1'}}`;
       modalStudio.textContent = item.studios ? `Studio: ${{item.studios}}` : `Phim hoạt hình`;
       modalEp.textContent = `Tập ${{item.episode || '1'}}`;
-      modalBackdrop.src = item.backdrop_url || item.poster_url || '';
       modalDesc.textContent = item.description || `Phim: ${{item.title}} - Tập ${{item.episode || '1'}}\\nĐường dẫn xem phim: ${{item.watch_url}}`;
       modalWatchLink.href = item.watch_url || '#';
 
-      if (item.embed_url) {{
-        modalEmbedExt.href = item.embed_url;
-        modalEmbedExt.classList.remove("hidden");
-        modalPlayTrigger.classList.remove("hidden");
+      const playerUrl = getPlayerUrl(item);
+      if (playerUrl) {{
+        modalIframe.src = playerUrl;
+        modalIframe.classList.remove("hidden");
+        modalFallback.classList.add("hidden");
       }} else {{
-        modalEmbedExt.classList.add("hidden");
-        modalPlayTrigger.classList.add("hidden");
+        modalIframe.src = "";
+        modalIframe.classList.add("hidden");
+        modalFallback.classList.remove("hidden");
+        modalFallbackLink.href = item.watch_url || '#';
       }}
-
-      modalPlayerContainer.classList.add("hidden");
-      modalIframe.src = "";
 
       modal.classList.remove("hidden");
       modal.classList.add("flex");
@@ -419,35 +520,40 @@ html_content = f"""<!DOCTYPE html>
       document.body.style.overflow = "";
     }}
 
-    function playModalVideo() {{
-      if (currentItem && currentItem.embed_url) {{
-        modalPlayerContainer.classList.remove("hidden");
-        modalIframe.src = currentItem.embed_url;
+    function copyEmbedCode() {{
+      if (!currentItem) {{
+        showToast("Vui lòng chọn 1 phim trước khi lấy mã nhúng!");
+        return;
       }}
+      const playerUrl = getPlayerUrl(currentItem);
+      if (!playerUrl) {{
+        showToast("Phim này chưa có link player để nhúng!");
+        return;
+      }}
+      const fullUrl = window.location.origin + playerUrl;
+      const iframeCode = `<iframe src="${{fullUrl}}" width="100%" height="500" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+      navigator.clipboard.writeText(iframeCode).then(() => {{
+        showToast("Đã chép mã iframe vào Clipboard!");
+      }});
     }}
 
-    function copyCurrentLink() {{
-      if (currentItem && currentItem.watch_url) {{
-        navigator.clipboard.writeText(currentItem.watch_url).then(() => {{
-          alert("✅ Đã sao chép link:\\n" + currentItem.watch_url);
-        }}).catch(() => {{
-          prompt("Copy link:", currentItem.watch_url);
-        }});
-      }}
+    function copyCurrentEmbedIframe() {{
+      copyEmbedCode();
     }}
 
-    // Auto-scroll infinite loader
-    window.addEventListener("scroll", () => {{
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {{
-        if (displayedCount < filteredList.length) {{
-          loadMore();
-        }}
-      }}
-    }});
+    function showToast(msg) {{
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {{
+        toast.classList.add("translate-y-20", "opacity-0");
+      }}, 2500);
+    }}
 
-    searchInput.addEventListener("input", applyFilterAndReset);
-    studioSelect.addEventListener("change", applyFilterAndReset);
-    sortSelect.addEventListener("change", applyFilterAndReset);
+    // Event Listeners
+    searchInput.addEventListener("input", applyFilters);
+    studioSelect.addEventListener("change", applyFilters);
+    sortSelect.addEventListener("change", applyFilters);
 
     modal.addEventListener("click", (e) => {{
       if (e.target === modal) closeModal();
@@ -457,20 +563,22 @@ html_content = f"""<!DOCTYPE html>
       if (e.key === "Escape") closeModal();
     }});
 
-    initFilters();
-    applyFilterAndReset();
+    // Tự động nạp phim đầu tiên vào khung player
+    if (RAW_DATA.length > 0) {{
+      const firstWithVideo = RAW_DATA.find(x => x.video_id) || RAW_DATA[0];
+      currentItem = firstWithVideo;
+      cinemaTitle.textContent = `${{firstWithVideo.title}} - Tập ${{firstWithVideo.episode || '1'}}`;
+      cinemaStudio.textContent = `Studio: ${{firstWithVideo.studios || 'Hoạt hình'}}`;
+      cinemaEp.textContent = `Tập ${{firstWithVideo.episode || '1'}}`;
+      cinemaExtLink.href = firstWithVideo.watch_url || '#';
+    }}
   </script>
 </body>
 </html>
 """
 
-project_html_path = "/home/ken/.gemini/antigravity/scratch/tool/hentaivs_crawler/index.html"
-with open(project_html_path, "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-artifact_dir = "/home/ken/.gemini/antigravity/brain/45f9c356-623c-4333-866d-65fb4cc2e01f"
-artifact_html_path = os.path.join(artifact_dir, "viewer.html")
-with open(artifact_html_path, "w", encoding="utf-8") as f:
+output_path = "/home/ken/.gemini/antigravity/scratch/tool/hentaivs_crawler/index.html"
+with open(output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
 print(f"Generated web viewer with {len(crawled_data)} items successfully!")
