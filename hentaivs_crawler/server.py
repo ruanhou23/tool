@@ -54,9 +54,13 @@ def get_lan_ip():
     except Exception:
         return "127.0.0.1"
 
-def decrypt_stream_data(video_id):
+STREAM_CACHE = {}
+
+def get_stream_data(video_id):
     if not HAS_CRYPTO or not video_id:
         return None
+    if video_id in STREAM_CACHE:
+        return STREAM_CACHE[video_id]
 
     import urllib.request
     url = f"https://x.mimix.cc/watch/{video_id}"
@@ -81,35 +85,57 @@ def decrypt_stream_data(video_id):
         decryptor = cipher.decryptor()
         plaintext = decryptor.update(ciphertext_bytes) + decryptor.finalize()
 
-        return json.loads(plaintext.decode("utf-8"))
-    except Exception:
+        data = json.loads(plaintext.decode("utf-8"))
+        STREAM_CACHE[video_id] = data
+        return data
+    except Exception as e:
+        print(f"Error fetching/decrypting stream for {video_id}: {e}")
         return None
 
-def build_master_m3u8(video_id):
-    if video_id in M3U8_CACHE:
-        return M3U8_CACHE[video_id]
-
-    data = decrypt_stream_data(video_id)
+def build_master_playlist(video_id):
+    data = get_stream_data(video_id)
     if not data:
         return None
 
-    seg_domain = data.get("segmentDomains", ["https://c2.animez.top"])[0]
-    vid = data.get("id", video_id)
     master = data.get("defaultM3u8", {}).get("master", "")
     if not master:
         return None
 
     out_lines = []
+    p_idx = 0
     for line in master.splitlines():
-        line = line.strip()
-        if line.endswith(".m3u8"):
-            out_lines.append(f"{seg_domain}/{vid}/{line}")
+        l = line.strip()
+        if l.endswith(".m3u8"):
+            q_path = l.split("/")[0] if "/" in l else l
+            out_lines.append(f"/api/m3u8?v={video_id}&q={q_path}&idx={p_idx}")
+            p_idx += 1
         else:
-            out_lines.append(line)
+            out_lines.append(l)
 
-    final_m3u8 = "\n".join(out_lines)
-    M3U8_CACHE[video_id] = final_m3u8
-    return final_m3u8
+    return "\n".join(out_lines)
+
+def build_sub_playlist(video_id, q_path, idx):
+    data = get_stream_data(video_id)
+    if not data:
+        return None
+
+    playlists = data.get("defaultM3u8", {}).get("playlists", [])
+    if idx < 0 or idx >= len(playlists):
+        return None
+
+    seg_domain = data.get("segmentDomains", ["https://c1.animez.top"])[0]
+    vid = data.get("id", video_id)
+    raw_playlist = playlists[idx]
+
+    out_lines = []
+    for line in raw_playlist.splitlines():
+        l = line.strip()
+        if l and not l.startswith("#"):
+            out_lines.append(f"{seg_domain}/{vid}/{q_path}/{l}")
+        else:
+            out_lines.append(l)
+
+    return "\n".join(out_lines)
 
 
 EMBED_TEMPLATE = """<!DOCTYPE html>
@@ -193,7 +219,7 @@ EMBED_TEMPLATE = """<!DOCTYPE html>
       if (Hls.isSupported()) {
         if (artInstance.hls) artInstance.hls.destroy();
         const hls = new Hls({
-          enableWorker: false,
+          enableWorker: true,
           lowLatencyMode: false,
           backBufferLength: 60
         });
@@ -201,6 +227,16 @@ EMBED_TEMPLATE = """<!DOCTYPE html>
         hls.attachMedia(video);
         artInstance.hls = hls;
         artInstance.on('destroy', () => hls.destroy());
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          document.getElementById('loading-overlay').style.display = 'none';
+          if (!isMobile) {
+            artInstance.play().catch(e => {
+              artInstance.video.muted = true;
+              artInstance.play();
+            });
+          }
+        });
 
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
@@ -219,6 +255,9 @@ EMBED_TEMPLATE = """<!DOCTYPE html>
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
+        video.addEventListener('loadedmetadata', function () {
+          document.getElementById('loading-overlay').style.display = 'none';
+        });
       } else {
         showError("Trình duyệt không hỗ trợ định dạng video này.");
       }
@@ -319,18 +358,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
             pass
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
 
-        # 1. API cung cấp file Master m3u8
+        # 1. API cung cấp file Master hoặc Sub-playlist m3u8
         if parsed.path == "/api/m3u8":
             vid = qs.get("v", [""])[0]
+            idx_str = qs.get("idx", [""])[0]
+            q_path = qs.get("q", [""])[0]
+
             if not vid:
                 self.send_error(400, "Missing video ID (param: v)")
                 return
 
-            m3u8_content = build_master_m3u8(vid)
+            if idx_str != "":
+                try:
+                    idx = int(idx_str)
+                except ValueError:
+                    self.send_error(400, "Invalid playlist index")
+                    return
+                m3u8_content = build_sub_playlist(vid, q_path, idx)
+            else:
+                m3u8_content = build_master_playlist(vid)
+
             if not m3u8_content:
                 self.send_error(404, "Stream not found or decrypt failed")
                 return
@@ -340,6 +398,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/vnd.apple.mpegurl")
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "*")
             self.send_header("Cache-Control", "public, max-age=3600")
             self.end_headers()
             self.wfile.write(data)
@@ -358,6 +418,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "*")
             self.send_header("X-Frame-Options", "ALLOWALL")
             self.end_headers()
             self.wfile.write(data)
