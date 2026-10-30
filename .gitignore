@@ -6,3 +6,6 @@ __pycache__/
 
 hentaivs_crawler/cert.crt
 hentaivs_crawler/cert.key
+
+animevietsub_crawler/cert.crt
+animevietsub_crawler/cert.key

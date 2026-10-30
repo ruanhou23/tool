@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>AnimeVietSub Explorer & Cinema Player</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      background-color: var(--background, #07090e);
+      color: var(--foreground, #f3f4f6);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .backdrop-blur-md {
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.4);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(244, 63, 94, 0.6);
+    }
+    .aspect-cinema {
+      aspect-ratio: 16 / 9;
+    }
+    @media (min-width: 1024px) {
+      .aspect-cinema {
+        aspect-ratio: 21 / 9;
+        max-height: 540px;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-20 antialiased selection:bg-rose-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="size-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-950/40 text-xl font-bold">
+          🎌
+        </div>
+        <div>
+          <h1 class="text-lg font-bold leading-none tracking-tight text-white flex items-center gap-2">
+            AnimeVietSub Explorer
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">Nội bộ</span>
+          </h1>
+          <p class="text-xs text-slate-400 mt-0.5">Khám phá & xem phim từ animevietsub.news</p>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="flex items-center gap-2 text-xs font-medium">
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+          <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="stat-count" class="font-bold text-white">0</span> phim
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pt-5">
+
+    <!-- Cinema Video Player Section -->
+    <section id="cinema-section" class="mb-6 rounded-3xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-md transition-all">
+      
+      <!-- Cinema Top Bar -->
+      <div class="p-3.5 sm:p-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 bg-slate-950/70">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="size-2.5 rounded-full bg-sky-500 animate-pulse shrink-0"></span>
+          <h2 id="cinema-title" class="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+            📺 Khung xem phim AnimeVietSub
+          </h2>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span id="cinema-badge" class="px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-xs font-medium">
+            Chờ chọn phim
+          </span>
+          <button 
+            type="button" 
+            onclick="copyEmbedIframe()"
+            class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700 font-medium transition-all active:scale-95 flex items-center gap-1"
+            title="Sao chép mã iframe"
+          >
+            <span>📋</span> <span class="hidden sm:inline">Mã</span> iframe
+          </button>
+        </div>
+      </div>
+
+      <!-- Khung hiển thị Video Iframe -->
+      <div class="relative w-full aspect-cinema bg-black flex items-center justify-center overflow-hidden">
+        
+        <iframe 
+          id="cinema-iframe" 
+          class="w-full h-full border-0 hidden" 
+          allow="autoplay; fullscreen; picture-in-picture" 
+          allowfullscreen>
+        </iframe>
+        
+        <div id="cinema-placeholder" class="text-center p-6 sm:p-10 select-none">
+          <div class="size-16 sm:size-20 rounded-full bg-sky-600/10 border border-sky-500/30 text-sky-400 mx-auto flex items-center justify-center text-2xl sm:text-3xl mb-3 shadow-lg shadow-sky-950/30 animate-pulse">
+            ▶
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-white">Chưa chọn phim</h3>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1 max-w-sm mx-auto">
+            Chạm vào bất kỳ anime nào bên dưới để video bắt đầu phát ngay tại khung này!
+          </p>
+        </div>
+      </div>
+
+      <!-- Cinema Bottom Bar -->
+      <div id="cinema-info-bar" class="p-3.5 sm:p-4 bg-slate-950/80 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
+        <div class="flex items-center gap-2 text-slate-300 truncate">
+          <span id="cinema-studio" class="text-sky-400 font-semibold truncate">Studio: ---</span>
+          <span class="text-slate-600">•</span>
+          <span id="cinema-ep" class="text-slate-400 font-medium shrink-0">Tập --</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button 
+            type="button" 
+            onclick="reloadCinemaIframe()" 
+            class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 flex items-center gap-1 active:scale-95 transition-all">
+            <span>🔄</span> Tải lại
+          </button>
+          <a id="cinema-ext-link" href="#" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 text-xs font-semibold border border-slate-700 flex items-center gap-1 active:scale-95 transition-all">
+            <span>↗</span> Web gốc
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEARCH & FILTER SECTION -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 mb-6 backdrop-blur-md shadow-xl shadow-black/20">
+      
+      <!-- Search Input -->
+      <div class="relative mb-3.5">
+        <div class="relative flex items-center">
+          <svg class="size-4 text-sky-400 absolute left-3.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input 
+            type="text" 
+            id="search-input"
+            autocomplete="off"
+            placeholder="Tìm kiếm anime (tiếng Việt có dấu / không dấu, tên gốc, studio, tập 1, shounen, romance...)" 
+            class="w-full h-12 pl-10 pr-10 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all"
+          />
+          <button 
+            id="search-clear-btn"
+            type="button"
+            onclick="clearSearch()"
+            class="size-8 absolute right-2 text-slate-400 hover:text-white rounded-lg flex items-center justify-center hidden transition-colors"
+            title="Xóa tìm kiếm"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        
+        <!-- Studio Filter -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Studio</label>
+          <select 
+            id="studio-select" 
+            class="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs sm:text-sm focus:outline-none focus:border-sky-500 transition-all cursor-pointer">
+            <option value="">Tất cả Studio</option>
+          </select>
+        </div>
+
+        <!-- Genre Filter -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Thể loại</label>
+          <select 
+            id="genre-select" 
+            class="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs sm:text-sm focus:outline-none focus:border-sky-500 transition-all cursor-pointer">
+            <option value="">Tất cả thể loại</option>
+          </select>
+        </div>
+
+        <!-- Sort Filter -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Sắp xếp</label>
+          <select 
+            id="sort-select" 
+            class="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs sm:text-sm focus:outline-none focus:border-sky-500 transition-all cursor-pointer">
+            <option value="default">Mới nhất (Mặc định)</option>
+            <option value="views-desc">🔥 Lượt xem (Nhiều nhất)</option>
+            <option value="score-desc">⭐ Đánh giá (Cao nhất)</option>
+            <option value="title-asc">🔤 Tên (A - Z)</option>
+            <option value="title-desc">🔤 Tên (Z - A)</option>
+          </select>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Movies Grid Section -->
+    <section>
+      <div class="flex items-center justify-between mb-3.5 px-1">
+        <h2 class="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <span>Kết quả:</span>
+          <span id="filtered-count" class="text-white font-bold bg-slate-800 px-2.5 py-0.5 rounded-full text-xs">0</span>
+        </h2>
+        <span id="rendered-info" class="text-xs text-slate-500"></span>
+      </div>
+
+      <div id="movie-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+        <!-- Cards inserted by JS -->
+      </div>
+
+      <!-- Load More Button -->
+      <div id="load-more-container" class="mt-8 text-center hidden">
+        <button 
+          onclick="loadMore()"
+          class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-sky-600 text-white text-sm font-bold shadow-lg transition-all active:scale-95">
+          Tải thêm (+48 phim)
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden py-16 text-center">
+        <div class="size-16 rounded-2xl bg-slate-900 border border-slate-800 mx-auto flex items-center justify-center text-3xl mb-3">
+          🔍
+        </div>
+        <h3 class="text-base font-bold text-white">Không tìm thấy anime phù hợp</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Thử đổi từ khóa tìm kiếm khác nhé!</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-4 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-sm shadow-xl flex items-center gap-2">
+    <span>✓</span> <span id="toast-msg">Đã sao chép!</span>
+  </div>
+
+  <script>
+    const RAW_DATA = [{"id": "6134", "title": "Đám Cưới Đom Đóm", "subtitle": "Hotaru no Yomeiri, Firefly Wedding", "slug": "hotaru-no-yomeiri-a6134", "url": "https://animevietsub.news/phim/hotaru-no-yomeiri-a6134/", "watch_url": "https://animevietsub.news/phim/hotaru-no-yomeiri-a6134/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-IkoZvZinp6.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-oNM145nvjP.jpg", "latest_episode": "04", "total_episodes": "04/12", "score": "9.6", "views": "276032", "year": "", "studio": "David Production", "quality": "HD", "rating": "R - 17+ (bạo lực và tục tĩu)", "genres": "Romance, Psychological, Drama, Historical, Action", "description": "Lấy bối cảnh thời kỳ Minh Trị tại Nhật Bản, Satoko Kirigaya, một tiểu thư cao quý, xinh đẹp nhưng lại mắc một căn bệnh tim hiểm nghèo và không còn nhiều thời gian để sống. Cuộc đời cô đảo lộn khi cô trở thành mục tiêu của một vụ ám sát. Để giành giật lấy mạng sống, Satoko đã đưa ra một lời đề nghị táo bạo với chính kẻ ám sát mình, Shinpei Goto, một sát thủ điên loạn nhưng si tình: Hãy kết hôn với cô, đổi lại anh sẽ có được tiền tài và quyền lực của gia tộc Kirigaya. Từ đó, một khế ước hôn nhân đầy nguy hiểm và một tình yêu cuồng si, chiếm hữu bắt đầu.", "embed_url": "https://stream.googleapiscdn.com/player/a96d9a5654e211047ed42e8087d9f61a8fc202ff184e54be826bbe67afb7c776?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116237", "url": "https://animevietsub.news/phim/hotaru-no-yomeiri-a6134/tap-02-116237.html", "label": "02"}, {"episode": "03", "id": "116419", "url": "https://animevietsub.news/phim/hotaru-no-yomeiri-a6134/tap-03-116419.html", "label": "03"}, {"episode": "04", "id": "116530", "url": "https://animevietsub.news/phim/hotaru-no-yomeiri-a6134/tap-04-116530.html", "label": "04"}]}, {"id": "6097", "title": "Tougen Anki: Nikko Kegon no Taki-hen", "subtitle": "Tougen Anki: Nikko Kegon Falls Arc", "slug": "tougen-anki-nikko-kegon-no-taki-hen-a6097", "url": "https://animevietsub.news/phim/tougen-anki-nikko-kegon-no-taki-hen-a6097/", "watch_url": "https://animevietsub.news/phim/tougen-anki-nikko-kegon-no-taki-hen-a6097/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-QuLudE4Whq.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-AEx6HfufUA.png", "latest_episode": "05", "total_episodes": "05/??", "score": "9.1", "views": "176457", "year": "", "studio": "Studio Hibari", "quality": "HD", "rating": "R - 17+ (bạo lực và tục tĩu)", "genres": "Shounen, Fantasy, Action", "description": "Sau các trận chiến khốc liệt tại Kyoto và Nerima, các học viên của Học viện Rasetsu đã trưởng thành vượt bậc. Tuy nhiên, mâu thuẫn dâng cao khi Yaoroshi rời học viện để gia nhập Lữ đoàn Oni nhằm thực hiện kế hoạch \"tiêu diệt hoàn toàn Momotaro\". Khi Shiki nhận ra tổ chức này nhắm vào cả những người không tham chiến, cậu đã lập tức đuổi theo để đưa Yaoroshi trở về. Cùng lúc đó tại Nikko, một cơ sở nghiên cứu bí mật được xây dựng ngay trên đỉnh thác nước Kegon cũ. Nơi đây đang thực hiện những cuộc thí nghiệm kinh hoàng lên dòng máu Oni, đẩy cuộc chiến truyền kiếp giữa phe Oni và Tổ chức Momotaro lên một nấc thang tàn khốc mới.", "embed_url": "https://stream.googleapiscdn.com/player/e4c112e781063b2bd0f079b8e470b32d3f965f60ffbbaa71fb1c602fe9f3e9ab?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116236", "url": "https://animevietsub.news/phim/tougen-anki-nikko-kegon-no-taki-hen-a6097/tap-03-116236.html", "label": "03"}, {"episode": "04", "id": "116418", "url": "https://animevietsub.news/phim/tougen-anki-nikko-kegon-no-taki-hen-a6097/tap-04-116418.html", "label": "04"}, {"episode": "05", "id": "116529", "url": "https://animevietsub.news/phim/tougen-anki-nikko-kegon-no-taki-hen-a6097/tap-05-116529.html", "label": "05"}]}, {"id": "6133", "title": "ITEM - Những Cô Gái Cộng Sinh Ở Thế Giới Ngầm", "subtitle": "Toaru Anbu no Item, A Certain Dark Item, Toaru Anbu no Shoujo Kyousei, A Certain Dark Side's Item", "slug": "toaru-anbu-no-item-a6133", "url": "https://animevietsub.news/phim/toaru-anbu-no-item-a6133/", "watch_url": "https://animevietsub.news/phim/toaru-anbu-no-item-a6133/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-ipTZhaPlrf.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-ByVbOorFMn.jpg", "latest_episode": "04", "total_episodes": "04/??", "score": "8.7", "views": "82128", "year": "", "studio": "J.C.Staff", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Sci-Fi, Super Power, Fantasy, Action", "description": "Lấy bối cảnh một năm trước khi Kamijou Touma gặp Index hay Misaka Mikoto bắt đầu các sự kiện trong Railgun. Lúc này, ITEM vẫn chưa phải là một nhóm gắn kết hoàn hảo, và bản thân các cô gái đang phải chật vật tìm chỗ đứng cũng như cách sinh tồn trong bóng tối.", "embed_url": "https://stream.googleapiscdn.com/player/a2fb0b0f16bdd930d806b1a8bbb5f101f2c4ec416f0ac7272222052909fa4bc4?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116235", "url": "https://animevietsub.news/phim/toaru-anbu-no-item-a6133/tap-02-116235.html", "label": "02"}, {"episode": "03", "id": "116417", "url": "https://animevietsub.news/phim/toaru-anbu-no-item-a6133/tap-03-116417.html", "label": "03"}, {"episode": "04", "id": "116528", "url": "https://animevietsub.news/phim/toaru-anbu-no-item-a6133/tap-04-116528.html", "label": "04"}]}, {"id": "6095", "title": "Dược Sư Tự Sự 3", "subtitle": "Kusuriya no Hitorigoto 3rd Season, The Apothecary Diaries Season 3, The Pharmacist's Monologue, Drugstore Soliloquy", "slug": "kusuriya-no-hitorigoto-3rd-season-a6095", "url": "https://animevietsub.news/phim/kusuriya-no-hitorigoto-3rd-season-a6095/", "watch_url": "https://animevietsub.news/phim/kusuriya-no-hitorigoto-3rd-season-a6095/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-QLLWDa8YyT.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-kUopbQBKYS.png", "latest_episode": "05", "total_episodes": "05/24", "score": "9.6", "views": "472916", "year": "", "studio": "OLM", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Slice of Life, Seinen, Drama, Comedy, Historical, Mystery", "description": "Mùa 3 của Kusuriya no Hitorigoto.", "embed_url": "https://stream.googleapiscdn.com/player/ffe566a3b165703ef61467d34e0bbcd909fa73539af716656348d8800b44d4d4?schedule=Th%E1%BB%A9+S%C3%A1u+v%C3%A0o+l%C3%BAc+22+gi%E1%BB%9D+30+ph%C3%BAt", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116234", "url": "https://animevietsub.news/phim/kusuriya-no-hitorigoto-3rd-season-a6095/tap-03-116234.html", "label": "03"}, {"episode": "04", "id": "116416", "url": "https://animevietsub.news/phim/kusuriya-no-hitorigoto-3rd-season-a6095/tap-04-116416.html", "label": "04"}, {"episode": "05", "id": "116527", "url": "https://animevietsub.news/phim/kusuriya-no-hitorigoto-3rd-season-a6095/tap-05-116527.html", "label": "05"}]}, {"id": "5015", "title": "Đại Chúa Tể", "subtitle": "The Great Ruler", "slug": "dai-chua-te-a5015", "url": "https://animevietsub.news/phim/dai-chua-te-a5015/", "watch_url": "https://animevietsub.news/phim/dai-chua-te-a5015/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2023/06/30/animevsub-gNSCKoXFrC.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/banner/2023/06/30/animevsub-8bfYygMXU7.jpg", "latest_episode": "96", "total_episodes": "96/??", "score": "8.1", "views": "3403252", "year": "", "studio": "Đang Cập Nhật", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Cartoon", "description": "Đại Chúa Tể 3D kể về Đại thế giới, vị diện giao hội, vạn tộc mọc lên san sát như rừng, quần hùng tập trung, một vị từ tương lai Hạ vị diện đích Thiên chi Chí tôn, tại đây Vô Tận Thế Giới, diễn lại làm cho người hướng tới Truyền Kỳ, truy cầu lấy cái kia chúa tể chi lộ.Vô tận hỏa vực, Viêm Đế chấp chưởng, Vạn Hỏa đốt Thương Khung.Võ Cảnh ở trong, Vũ tổ chi uy, chấn nhiếp Càn Khôn.Tây Thiên chi điện, bách chiến chi hoàng, chiến uy không thể địch.Bắc Hoang chi khâu, Vạn Mộ chi địa, Bất Tử chi chủ trấn Thiên địa.", "embed_url": "https://stream.googleapiscdn.com/player/b0fa096022e3e0fb686bd1bad34d43a993ff6e7af74e5e3e77fa59b0607aebb4?nextName=02&nextUrl=https%3A%2F%2Fanimevietsub.news%2Fphim%2Fdai-chua-te-a5015%2Ftap-02-92201.html", "episodes_count": 0, "episodes": []}, {"id": "3821", "title": "Vô Thượng Thần Đế", "subtitle": "Supreme God Emperor, Wu Shang Shen Di", "slug": "vo-thuong-than-de-a3821", "url": "https://animevietsub.news/phim/vo-thuong-than-de-a3821/", "watch_url": "https://animevietsub.news/phim/vo-thuong-than-de-a3821/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2020/09/05/animevsub-bBwWl7ZXel.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/2020/09/05/animevsub-gbA2t3J8FS.jpg", "latest_episode": "653", "total_episodes": "653/??", "score": "6.9", "views": "8569731", "year": "", "studio": "Ruo Hong Culture", "quality": "HD", "rating": "None", "genres": "Cartoon", "description": "Tiên Vương Mục Vân bởi vì nắm giữ Tru Tiên Đồ mà bị kẻ khác ám toán, tàn hồn ngủ say vạn năm sau, thức tỉnh ở trên người \"Phế vật Mục Vân\" tại Nam Vân đế quốc Thiên Vận đại lục.Mục Vân mới tỉnh, đã nhận phải sự xem thường của đám học trò, sự khinh rẻ của gia tộc. Nhưng Mục Vân đã dễ dàng hóa giải các thử thách, đồng thời còn khiến nhiều người phải bất ngờ về khả năng của bản thân.Tiếp tục hành trình tu luyện, Mục Vân đã thề phải khuấy đảo thiên địa , trở về đỉnh cao. \"Một đời này, ta nhất định phải thống trị vạn giới, phá vỡ trời cao!", "embed_url": "https://stream.googleapiscdn.com/player/008a4c25840af74c8a9465e3ace9b40b5c586ab5ab60046bab6aba3b71de472e?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "651", "id": "116414", "url": "https://animevietsub.news/phim/vo-thuong-than-de-a3821/tap-651-116414.html", "label": "651"}, {"episode": "652", "id": "116483", "url": "https://animevietsub.news/phim/vo-thuong-than-de-a3821/tap-652-116483.html", "label": "652"}, {"episode": "653", "id": "116524", "url": "https://animevietsub.news/phim/vo-thuong-than-de-a3821/tap-653-116524.html", "label": "653"}]}, {"id": "4679", "title": "Tru Tiên", "subtitle": "Zhu Xian, Jade Dynasty", "slug": "zhu-xian-a4679", "url": "https://animevietsub.news/phim/zhu-xian-a4679/", "watch_url": "https://animevietsub.news/phim/zhu-xian-a4679/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2022/08/02/animevsub-r0adZL56My.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/2022/08/02/animevsub-xDQkIMLyxd.png", "latest_episode": "91", "total_episodes": "91/??", "score": "8.3", "views": "4204860", "year": "", "studio": "Cloud Art", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Fantasy, Adventure", "description": "Duyên đến duyên đi, tình định tru tiên. Chuyển thể từ tiểu thuyết Tru Tiên của tác giả Tiêu Đỉnh kể về thiếu niên Trương Tiểu Phàm, một người một côn đối mặt với thế giới", "embed_url": "https://stream.googleapiscdn.com/player/ebaeac643e806294824eb8f412aa27f5ba93d27765e83e3dce9ba44ef8032164?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "89", "id": "116243", "url": "https://animevietsub.news/phim/zhu-xian-a4679/tap-89-116243.html", "label": "89"}, {"episode": "90", "id": "116398", "url": "https://animevietsub.news/phim/zhu-xian-a4679/tap-90-116398.html", "label": "90"}, {"episode": "91", "id": "116523", "url": "https://animevietsub.news/phim/zhu-xian-a4679/tap-91-116523.html", "label": "91"}]}, {"id": "5007", "title": "Thương Nguyên Đồ", "subtitle": "Cang Yuan Tu, Azure Legacy", "slug": "thuong-nguyen-do-a5007", "url": "https://animevietsub.news/phim/thuong-nguyen-do-a5007/", "watch_url": "https://animevietsub.news/phim/thuong-nguyen-do-a5007/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/banner/2023/06/22/animevsub-K2YT1Om6jX.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/banner/2023/06/22/animevsub-pknhu2jsMF.jpg", "latest_episode": "101", "total_episodes": "101/??", "score": "9.1", "views": "5412952", "year": "", "studio": "Đang Cập Nhật", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Cartoon", "description": "Thương Nguyên Đồ - Cang Yuan Tu nói về yêu tà hoành hành ở Thương Nguyên giới, loài người chịu đủ tàn phá, nam chính Mạnh Xuyên từ nhỏ đã lập lời thề phải báo thù cho mẫu thân. Lấy đạo viện Kính Hồ làm khởi điểm, dựa vào tâm chí kiên nghị không sợ hãi và thân thủ đao pháp nhanh nhạt, trừng phạt gian ác, tiêu diệt yêu tộc, đăng đỉnh tứ đại đạo viện, nổi danh Đông Minh phủ, bái Thượng Nguyên Sơ Sơn, trở thành một Thần ma.", "embed_url": "https://stream.googleapiscdn.com/player/816993393dbf538f56c2154ab48d198991ae76fe2eee4505b7cdd54068f1fb36?nextName=02&nextUrl=https%3A%2F%2Fanimevietsub.news%2Fphim%2Fthuong-nguyen-do-a5007%2Ftap-02-92030.html", "episodes_count": 0, "episodes": []}, {"id": "6082", "title": "Thái Cổ Thần Tôn", "subtitle": "Ancient God", "slug": "thai-co-than-ton-a6082", "url": "https://animevietsub.news/phim/thai-co-than-ton-a6082/", "watch_url": "https://animevietsub.news/phim/thai-co-than-ton-a6082/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-C0nq77oFot.png", "backdrop_url": "https://animevietsub.news/statics/default/images/bg/bg-17.jpg", "latest_episode": "30", "total_episodes": "30/20", "score": "4", "views": "184592", "year": "", "studio": "", "quality": "", "rating": "None", "genres": "Cổ Trang", "description": "Đó là câu chuyện của một vị thái tử cao cao tại thượng của Linh Giới, nhưng đoản mệnh và bị kẻ thù hãm hại để đến mức phải đi bán muối sớm. Sau khi đi bán muối một thời gian dài, thái tử đầu thai và trở thành một con người phàm trần hết sức tầm thường, đáng thương, phải sống trong thân phận của một kẻ nô dịch không hơn không kém. Tuy nhọ là thế nhưng thái tử lại không hề chịu lép vế so với số phận hẩm hiu của mình, bởi vốn mang trong mình một thứ gọi là Tạo Hóa Thần Đan, thứ công phu sức mạnh có thể giúp con người phàm nghịch thiên cải mệnh, tu luyện thần tốc và thức tỉnh võ hồn mà bao người ao ước. Chẳng mấy chốc, thái tử chinh phạt khắp nơi, chẳng nơi nào ngài bước qua mà không phải quỳ rạp xuống chào thua cả, từ một thanh kiếm cũ nát rồi khắp thiên hạ đều phải cúi đầu trước sức mạnh ngang tàng của ngài. Chưa kể đến những chiến tích và các bảo vật tối thượng cũng chẳng thể thoát khỏi tay ngài. Những người thân, hồng nhan tri kỷ đều được thái tử bảo vệ và gìn giữ vô cùng ấm êm, và thứ sau cùng chính là việc phá tan âm mưu của thế lực hắc ám đã náo loạn nhân gian từ thời thượng cổ, tạo nên một trang sử chói lòa.", "embed_url": "https://stream.googleapiscdn.com/player/03f6fdf90ffa690ab7f646fb8f2a63d3b2a37435081bfd328261888fd48e0ad2?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "28", "id": "116397", "url": "https://animevietsub.news/phim/thai-co-than-ton-a6082/tap-28-116397.html", "label": "28"}, {"episode": "29", "id": "116440", "url": "https://animevietsub.news/phim/thai-co-than-ton-a6082/tap-29-116440.html", "label": "29"}, {"episode": "30", "id": "116521", "url": "https://animevietsub.news/phim/thai-co-than-ton-a6082/tap-30-116521.html", "label": "30"}]}, {"id": "6139", "title": "Người Giữ Mộ Đại Hạ", "subtitle": "The Great Xia Tomb Keeper", "slug": "nguoi-giu-mo-dai-ha-a6139", "url": "https://animevietsub.news/phim/nguoi-giu-mo-dai-ha-a6139/", "watch_url": "https://animevietsub.news/phim/nguoi-giu-mo-dai-ha-a6139/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-lkZ0ZCmkvD.png", "backdrop_url": "https://animevietsub.news/statics/default/images/bg/bg-17.jpg", "latest_episode": "12", "total_episodes": "12/??", "score": "6.7", "views": "60752", "year": "", "studio": "", "quality": "FHD", "rating": "None", "genres": "Cartoon", "description": "Thời thế tạo anh hùng, hay là anh hùng làm nên thời thế ? Câu hỏi ấy có lẽ sẽ có đáp án khi xem xong bộ phim hoạt hình 3D có tên Người Giữ Mộ Đại Hạ này. Chuyện là từ một sự kiện mang tính bước ngoặt lịch sử của nhân loại khi mà trăng máu xuất hiện liền trong 3 ngày khi 10 năm về trước, nó đã kéo theo vô số những sự đe dọa đến sự tồn vong của nhân loại, nào mà yêu ma quỷ quái xuất hiện như cơm bữa, các dị tượng và thiên tai cùng nhau kéo đến liên hồi, đưa con người vào những khó khăn chồng chất. Nhưng cũng không có lựa chọn nào khác, quy phục dưới sự hoành hành của yêu ma hay vùng lên chiến đấu để thay đổi vận mệnh, đó còn phụ thuộc vào sự mưu trí và lòng dũng cảm. Trong khoảnh khắc ấy, Tô Bạch chính là người đã lãnh đạo mọi người đứng lên để thay đổi vận mệnh của họ và cả thế giới.", "embed_url": "https://stream.googleapiscdn.com/player/dfdf79975696b8df714a7699b17866a3ca0b19a20909060abdb82bfcb1360b9a?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "10", "id": "116394", "url": "https://animevietsub.news/phim/nguoi-giu-mo-dai-ha-a6139/tap-10-116394.html", "label": "10"}, {"episode": "11", "id": "116495", "url": "https://animevietsub.news/phim/nguoi-giu-mo-dai-ha-a6139/tap-11-116495.html", "label": "11"}, {"episode": "12", "id": "116520", "url": "https://animevietsub.news/phim/nguoi-giu-mo-dai-ha-a6139/tap-12-116520.html", "label": "12"}]}, {"id": "5084", "title": "Nghịch Thiên Tà Thần", "subtitle": "Ni Tian Xieshen", "slug": "nghich-thien-ta-than-a5084", "url": "https://animevietsub.news/phim/nghich-thien-ta-than-a5084/", "watch_url": "https://animevietsub.news/phim/nghich-thien-ta-than-a5084/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2023/09/23/animevsub-L07tE50ZVl.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/banner/2023/09/23/animevsub-H5PbYvek6h.jpg", "latest_episode": "61", "total_episodes": "61/??", "score": "8", "views": "2137691", "year": "", "studio": "Foch Films", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Fantasy, Martial Arts, Action", "description": "Câu chuyện xoay quanh Vô Cực Đại Lục, nơi mà các võ đạo và ma pháp tồn tại song song. Chàng trai Yun Che, một tay sát thủ tài ba, bị cuốn vào một cuộc phiêu lưu đầy nguy hiểm và bí ẩn. Với sự trợ giúp của nữ thần bí Cửu Thiên, Yun Che phải đối mặt với những thử thách khắc nghiệt và đánh bại những kẻ thù đáng sợ để bảo vệ những người mà anh yêu thương.", "embed_url": "https://stream.googleapiscdn.com/player/e71d09d28bd93820aa7bd44afdbd24fa2bf3c9ff777790cb6f4c6b750d29ff91?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "60", "id": "116391", "url": "https://animevietsub.news/phim/nghich-thien-ta-than-a5084/tap-60-116391.html", "label": "60"}, {"episode": "60", "id": "116390", "url": "https://animevietsub.news/phim/nghich-thien-ta-than-a5084/tap-60-116390.html", "label": "60"}, {"episode": "61", "id": "116519", "url": "https://animevietsub.news/phim/nghich-thien-ta-than-a5084/tap-61-116519.html", "label": "61"}]}, {"id": "4194", "title": "Nghịch Thiên Chí Tôn", "subtitle": "Ni Tian Zhizun, Against The Sky Supreme, N.T.Z.Z", "slug": "nghich-thien-chi-ton-a4194", "url": "https://animevietsub.news/phim/nghich-thien-chi-ton-a4194/", "watch_url": "https://animevietsub.news/phim/nghich-thien-chi-ton-a4194/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2021/07/17/animevsub-tJWxR8WuKy.png", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/2021/07/17/animevsub-loCnxV2dlR.jpg", "latest_episode": "562", "total_episodes": "562/???", "score": "6.9", "views": "7891928", "year": "", "studio": "", "quality": "HD", "rating": "None", "genres": "Action", "description": "Ngày xưa uy chấn chư thiên Thần Vực, vạn thế luân hồi sau thảm tao diệt môn! Tàn khốc nguyền rủa, vạn thế cừu hận, Đàm Vân lập chí, không còn trầm luân! Vì tình cảm chân thành, thân nhân, từ đây từng bước một giẫm lên cừu nhân thi thể siêu việt đỉnh phong! Nghịch thiên sát lục, tung hoành vạn giới, duy ta chí tôn! Gái gú thì khỏi nói...", "embed_url": "https://stream.googleapiscdn.com/player/cb8c3c1607cf34145e1659981829b653e751e7325fe7093304a2530a0e394931?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "560", "id": "116412", "url": "https://animevietsub.news/phim/nghich-thien-chi-ton-a4194/tap-560-116412.html", "label": "560"}, {"episode": "561", "id": "116475", "url": "https://animevietsub.news/phim/nghich-thien-chi-ton-a4194/tap-561-116475.html", "label": "561"}, {"episode": "562", "id": "116518", "url": "https://animevietsub.news/phim/nghich-thien-chi-ton-a4194/tap-562-116518.html", "label": "562"}]}, {"id": "4948", "title": "Đấu La Đại Lục 2: Tuyệt thế Đường Môn", "subtitle": "Douluo Dalu II: Jueshi Tangmen, Soul Land 2 - Peerless Tang Sect, The Unrivaled Tang Sect, Combat Continent II", "slug": "dau-la-dai-luc-2-tuyet-the-duong-mon-a4948", "url": "https://animevietsub.news/phim/dau-la-dai-luc-2-tuyet-the-duong-mon-a4948/", "watch_url": "https://animevietsub.news/phim/dau-la-dai-luc-2-tuyet-the-duong-mon-a4948/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2026/01/18/animevsub-MNr5noGvgU.png", "backdrop_url": "https://cdn.animevietsub.news/data/banner/2023/04/02/animevsub-JTagg2qVdu.jpg", "latest_episode": "177", "total_episodes": "177/??", "score": "8.2", "views": "9429480", "year": "", "studio": "Sparkly Key Animation Studio", "quality": "FHD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Fantasy, Adventure, Action", "description": "Mùa 2 của Đấu La Đại Lục 2: Tuyệt thế Đường Môn", "embed_url": "https://stream.googleapiscdn.com/player/e15030f08e69afef701e72770b9e57b4a3b1329caa78df3c8ab34e2c2576344c?schedule=Th%E1%BB%A9+S%C3%A1u+v%C3%A0o+l%C3%BAc+18+gi%E1%BB%9D+30+ph%C3%BAt", "episodes_count": 3, "episodes": [{"episode": "175", "id": "116240", "url": "https://animevietsub.news/phim/dau-la-dai-luc-2-tuyet-the-duong-mon-a4948/tap-175-116240.html", "label": "175"}, {"episode": "176", "id": "116411", "url": "https://animevietsub.news/phim/dau-la-dai-luc-2-tuyet-the-duong-mon-a4948/tap-176-116411.html", "label": "176"}, {"episode": "177", "id": "116517", "url": "https://animevietsub.news/phim/dau-la-dai-luc-2-tuyet-the-duong-mon-a4948/tap-177-116517.html", "label": "177"}]}, {"id": "5386", "title": "Linh Võ Đại Lục", "subtitle": "Lingwu Continent, Đại Lục Linh Võ", "slug": "linh-vo-dai-luc-a5386", "url": "https://animevietsub.news/phim/linh-vo-dai-luc-a5386/", "watch_url": "https://animevietsub.news/phim/linh-vo-dai-luc-a5386/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2024/07/26/animevsub-n9CcZUwcGK.jpeg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/2024/07/26/animevsub-rZNnBjNqNR.jpg", "latest_episode": "228", "total_episodes": "228/??", "score": "7.9", "views": "2062597", "year": "", "studio": "", "quality": "FHD", "rating": "R - 17+ (bạo lực và tục tĩu)", "genres": "Fantasy, Action", "description": "Một thế giới mà linh lực và võ hồn cùng tồn tại, chỉ một ý niệm của linh tu là có thể dời non lấp bể, võ giả tay không nghiền nát trời đất. Thiên tài Thần Thiên, sau 10 tuổi võ hồn im lìm, linh hải khô cạn, trở thành phế vật của gia tộc. Sau đó vào nhầm đại trận của Cổ Kiếm Đế, có được cơ duyên lớn, từ đó cuộc đời thay đổi, phá thiên đạo, nắm giữ luân hồi, độ Đế kiếp, trở thành người đứng đầu đại lục Linh Võ.", "embed_url": "https://stream.googleapiscdn.com/player/0bbc133a3bd889b5076a403801862b14f37acf789c22b3779eb8a412f60416e2?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "226", "id": "116410", "url": "https://animevietsub.news/phim/linh-vo-dai-luc-a5386/tap-226-116410.html", "label": "226"}, {"episode": "227", "id": "116471", "url": "https://animevietsub.news/phim/linh-vo-dai-luc-a5386/tap-227-116471.html", "label": "227"}, {"episode": "228", "id": "116516", "url": "https://animevietsub.news/phim/linh-vo-dai-luc-a5386/tap-228-116516.html", "label": "228"}]}, {"id": "5785", "title": "Bắt Đầu Với Chí Tôn Đan Điền", "subtitle": "Star Sign In To Supreme Dantian", "slug": "bat-dau-voi-chi-ton-dan-dien-a5785", "url": "https://animevietsub.news/phim/bat-dau-voi-chi-ton-dan-dien-a5785/", "watch_url": "https://animevietsub.news/phim/bat-dau-voi-chi-ton-dan-dien-a5785/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2025/10/08/animevsub-umJNWGRQRk.jpg", "backdrop_url": "https://animevietsub.news/statics/default/images/bg/bg-17.jpg", "latest_episode": "36", "total_episodes": "36/??", "score": "6.1", "views": "281576", "year": "", "studio": "Đang Cập Nhật", "quality": "FHD", "rating": "None", "genres": "Cartoon", "description": "Bắt Đầu Với Chí Tôn Đan Điền phiên bản 3D sẽ mang đến những khoảnh khắc thú vì hơn với việc khắc họa sinh động hành trình trở thành Đại Đế đầy gian khổ của một bán thần tên là Tần Thư. Bị coi là bán thần vì Tần Thư tuy mang cốt cách của một thần tử nhưng lại sống trong thân xác của một người phàm từ khi mới sinh ra. Điều này mang lại vô số điều bất lợi và sự khinh miệt đến với cậu, các thần nhân thì luôn tìm cách để chiếm đoạt lấy thân phận thần tử của mình bởi với họ thì điều đó quá dễ dàng. Nhưng khi giang trần để thực sự sống trong thân thế của một con người đích thực, Tần Thư đã đanh thép khẳng định được sức mạnh và ý chí không bao giờ khuất phục của mình. Nhờ có những nỗ lực và cả cơ duyên nên Tần Thư đã có được Đan Đình Vĩnh Động, sức mạnh nâng lên không ngừng. Tần Thư đã giao chiến và hạ gục cả quỷ Tu La lẫn tên Võ Đế với sức mạnh vô song. Cũng chẳng còn ai có thể ngăn cản được bước chân của Tần Thư khi mà cậu đã sòng phẳng đánh bại hết cả 81 tầng trời và 9 tên Đế tử. Như vậy vẫn là chưa đủ, Tần Thư quay trở lại cứu rỗi Thần Đạo Giới trước âm mưu xâm lăng của Hỗn Nguyên Thiên Tôn, nhận được được sự ca tụng bất diệt của các thần nhân khác và đường hoàng ngồi vào ngôi vị Đại Đế mới.", "embed_url": "https://stream.googleapiscdn.com/player/e9d1d5eaac77a478fefc8a3af2f2b68962046fef7b616dc5293e5244a0c5c609?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "34", "id": "116238", "url": "https://animevietsub.news/phim/bat-dau-voi-chi-ton-dan-dien-a5785/tap-34-116238.html", "label": "34"}, {"episode": "35", "id": "116408", "url": "https://animevietsub.news/phim/bat-dau-voi-chi-ton-dan-dien-a5785/tap-35-116408.html", "label": "35"}, {"episode": "36", "id": "116515", "url": "https://animevietsub.news/phim/bat-dau-voi-chi-ton-dan-dien-a5785/tap-36-116515.html", "label": "36"}]}, {"id": "6092", "title": "Tempal: Item no Chikara", "subtitle": "Overgeared, 템빨", "slug": "tempal-item-no-chikara-a6092", "url": "https://animevietsub.news/phim/tempal-item-no-chikara-a6092/", "watch_url": "https://animevietsub.news/phim/tempal-item-no-chikara-a6092/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-MHItLTbNsa.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-gfTiRTYFID.jpg", "latest_episode": "05", "total_episodes": "05/12", "score": "8.4", "views": "193389", "year": "", "studio": "J.C.Staff", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Game, Fantasy, Action", "description": "Shin Youngwoo (trong game có biệt danh là Grid), một thanh niên có cuộc sống đời thực lận đận và là một người chơi cấp thấp luôn gặp xui xẻo trong tựa game thực tế ảo đình đám mang tên Satisfy. Mọi chuyện hoàn toàn đảo lộn khi anh vô tình hoàn thành một nhiệm vụ cấp S và tìm được một cuốn sách ma pháp huyền thoại. Vật phẩm này giúp anh chuyển chức thành \"Hậu duệ của Pagma\" (Pagma's Successor) – một thợ rèn thần cấp có khả năng chế tạo và sử dụng những trang bị tối tân, bá đạo nhất trò chơi. Từ một kẻ bị xem là thất bại, Grid bắt đầu hành trình dùng \"sức mạnh của trang bị\" để thay đổi số phận, tìm kiếm danh vọng và tiền tài, dù điều đó cũng kéo theo không ít rắc rối trong thế giới ảo.", "embed_url": "https://stream.googleapiscdn.com/player/d5d6e856c3fd8c305d5175ae5f6f41db375ebcd89166e8904a11b8a725e175bd?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116085", "url": "https://animevietsub.news/phim/tempal-item-no-chikara-a6092/tap-03-116085.html", "label": "03"}, {"episode": "04", "id": "116308", "url": "https://animevietsub.news/phim/tempal-item-no-chikara-a6092/tap-04-116308.html", "label": "04"}, {"episode": "05", "id": "116514", "url": "https://animevietsub.news/phim/tempal-item-no-chikara-a6092/tap-05-116514.html", "label": "05"}]}, {"id": "5894", "title": "JoJo no Kimyou na Bouken Part 7: Steel Ball Run", "subtitle": "Steel Ball Run: JoJo no Kimyou na Bouken, Steel Ball Run: JoJo's Bizarre Adventure, JoJo's Bizarre Adventure Part 7: Steel Ball Run, SBR", "slug": "jojo-no-kimyou-na-bouken-part-7-steel-ball-run-a5894", "url": "https://animevietsub.news/phim/jojo-no-kimyou-na-bouken-part-7-steel-ball-run-a5894/", "watch_url": "https://animevietsub.news/phim/jojo-no-kimyou-na-bouken-part-7-steel-ball-run-a5894/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/2026/03/19/animevsub-he43H9sKsU.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/2026/01/12/animevsub-1izVf8O6M5.png", "latest_episode": "07", "total_episodes": "07/??", "score": "9.5", "views": "1276295", "year": "", "studio": "David Production", "quality": "FHD", "rating": "R - 17+ (bạo lực và tục tĩu)", "genres": "Shounen, Supernatural, Adventure, Historical, Mystery, Action", "description": "Trong miền Tây hoang dã của nước Mỹ, cuộc đua vĩ đại nhất thế giới sắp sửa bắt đầu. Hàng nghìn người xếp hàng tại San Diego để du hành hơn sáu nghìn cây số nhằm có cơ hội giành giải thưởng lớn năm mươi triệu đô la. Khi kỷ nguyên của ngựa đang đi đến hồi kết, các thí sinh được phép sử dụng bất kỳ loại phương tiện nào họ muốn. Các đối thủ sẽ phải chịu đựng những điều kiện khắc nghiệt, di chuyển tới một trăm cây số mỗi ngày qua những vùng đất hoang sơ chưa được khám phá. Cuộc đua \"Steel Ball Run\" thực sự là một sự kiện có một không hai.Chàng trai trẻ Johnny Joestar, một cựu nài ngựa bị liệt, đã đến San Diego để theo dõi vạch xuất phát của cuộc đua. Tại đây, anh chạm trán với Gyro Zeppeli, một tay đua với hai quả cầu thép đeo bên hông thay vì khẩu súng. Johnny chứng kiến Gyro sử dụng một trong những quả cầu thép của mình để giải phóng một sức mạnh kỳ ảo, buộc một người đàn ông phải tự bắn vào mình trong một cuộc đấu tay đôi. Giữa lúc hành động, Johnny tình cờ chạm vào quả cầu thép và cảm thấy một sức mạnh mãnh liệt chạy qua đôi chân, cho phép anh đứng dậy lần đầu tiên sau hai năm. Thề sẽ tìm ra bí mật của những quả cầu thép, Johnny quyết định tham gia cuộc đua, và thế là chuyến phiêu lưu kỳ lạ của anh băng qua nước Mỹ trên hành trình \"Steel Ball Run\" bắt đầu.", "embed_url": "https://stream.googleapiscdn.com/player/6556c7a3365f6b97a29b88829c2bbb1461528ebe537129e36ab6edaa53861493?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "05", "id": "116233", "url": "https://animevietsub.news/phim/jojo-no-kimyou-na-bouken-part-7-steel-ball-run-a5894/tap-05-116233.html", "label": "05"}, {"episode": "06", "id": "116407", "url": "https://animevietsub.news/phim/jojo-no-kimyou-na-bouken-part-7-steel-ball-run-a5894/tap-06-116407.html", "label": "06"}, {"episode": "07", "id": "116513", "url": "https://animevietsub.news/phim/jojo-no-kimyou-na-bouken-part-7-steel-ball-run-a5894/tap-07-116513.html", "label": "07"}]}, {"id": "6132", "title": "Phù Thủy Băng Kiếm Sẽ Thống Trị Thế Giới 2", "subtitle": "Hyouken no Majutsushi ga Sekai wo Suberu II, Hyouken no Majutsushi ga Sekai wo Suberu 2nd Season, The Iceblade Sorcerer Shall Rule the World II", "slug": "hyouken-no-majutsushi-ga-sekai-wo-suberu-ii-a6132", "url": "https://animevietsub.news/phim/hyouken-no-majutsushi-ga-sekai-wo-suberu-ii-a6132/", "watch_url": "https://animevietsub.news/phim/hyouken-no-majutsushi-ga-sekai-wo-suberu-ii-a6132/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-9cF3IJLkGY.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/2022/12/08/animevsub-wAHP9sgxOr.jpg", "latest_episode": "04", "total_episodes": "04/12", "score": "8.4", "views": "255361", "year": "", "studio": "Zero-G", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "School, Fantasy, Adventure, Action", "description": "Mùa 2 của Hyouken no Majutsushi ga Sekai wo Suberu.", "embed_url": "https://stream.googleapiscdn.com/player/cc8068226f406c989b6d008122753ef894a3000361f9072ccd75d49a08728a52?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116231", "url": "https://animevietsub.news/phim/hyouken-no-majutsushi-ga-sekai-wo-suberu-ii-a6132/tap-02-116231.html", "label": "02"}, {"episode": "03", "id": "116405", "url": "https://animevietsub.news/phim/hyouken-no-majutsushi-ga-sekai-wo-suberu-ii-a6132/tap-03-116405.html", "label": "03"}, {"episode": "04", "id": "116512", "url": "https://animevietsub.news/phim/hyouken-no-majutsushi-ga-sekai-wo-suberu-ii-a6132/tap-04-116512.html", "label": "04"}]}, {"id": "6094", "title": "Kizu darake Seijo yori Houfuku wo Komete 2nd Season", "subtitle": "With Vengeance, Sincerely, Your Broken Saintess Season 2, The Holy Wound Became a Villain Vengeance from a Saint Full of Wounds Season 2", "slug": "kizu-darake-seijo-yori-houfuku-wo-komete-2nd-season-a6094", "url": "https://animevietsub.news/phim/kizu-darake-seijo-yori-houfuku-wo-komete-2nd-season-a6094/", "watch_url": "https://animevietsub.news/phim/kizu-darake-seijo-yori-houfuku-wo-komete-2nd-season-a6094/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-5ZTcigykcB.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-cZY8AhxH2M.jpg", "latest_episode": "05", "total_episodes": "05/??", "score": "7.1", "views": "138145", "year": "", "studio": "Imagica Infos, Imageworks Studio", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Romance, Fantasy", "description": "Mùa 2 của Kizu darake Seijo yori Houfuku wo Komete.", "embed_url": "https://stream.googleapiscdn.com/player/8b909ab1379fddeca5949ecbf3fdf7d848627005aec17f0a3b55ba4f18f93712?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116230", "url": "https://animevietsub.news/phim/kizu-darake-seijo-yori-houfuku-wo-komete-2nd-season-a6094/tap-03-116230.html", "label": "03"}, {"episode": "04", "id": "116404", "url": "https://animevietsub.news/phim/kizu-darake-seijo-yori-houfuku-wo-komete-2nd-season-a6094/tap-04-116404.html", "label": "04"}, {"episode": "05", "id": "116511", "url": "https://animevietsub.news/phim/kizu-darake-seijo-yori-houfuku-wo-komete-2nd-season-a6094/tap-05-116511.html", "label": "05"}]}, {"id": "6131", "title": "Tetsuryou! Meet with Tetsudou Musume", "subtitle": "Tetsuryou! Meet with Tetsudou Musume, Tetsuryo! Meet with Railroad Girls", "slug": "tetsuryou-meet-with-tetsudou-musume-a6131", "url": "https://animevietsub.news/phim/tetsuryou-meet-with-tetsudou-musume-a6131/", "watch_url": "https://animevietsub.news/phim/tetsuryou-meet-with-tetsudou-musume-a6131/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-s31mthEx5t.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-Fob9K3QT0R.jpg", "latest_episode": "04", "total_episodes": "04/12", "score": "9.4", "views": "83843", "year": "", "studio": "East Fish Studio", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Slice of Life, Seinen, School, Comedy", "description": "Misaki Sata, một cô sinh viên đại học đang tìm kiếm đam mê và muốn thoát khỏi cuộc sống tẻ nhạt thường ngày. Sau khi gia nhập Câu lạc bộ Du lịch Đường sắt tại trường, cô cùng ba thành viên khác bắt đầu hành trình đi qua nhiều ga tàu và khám phá vẻ đẹp ngành đường sắt Nhật Bản.", "embed_url": "https://stream.googleapiscdn.com/player/f1868a092ed11877c16bf3b84d67004f52c463781ae414418caf1eff5cbc49b8?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116229", "url": "https://animevietsub.news/phim/tetsuryou-meet-with-tetsudou-musume-a6131/tap-02-116229.html", "label": "02"}, {"episode": "03", "id": "116403", "url": "https://animevietsub.news/phim/tetsuryou-meet-with-tetsudou-musume-a6131/tap-03-116403.html", "label": "03"}, {"episode": "04", "id": "116510", "url": "https://animevietsub.news/phim/tetsuryou-meet-with-tetsudou-musume-a6131/tap-04-116510.html", "label": "04"}]}, {"id": "5993", "title": "Trọng Giáp Hiệp Sĩ Chuyển Sinh Bị Lưu Đày Trở Nên Vô Địch Nhờ Kiến Thức Về Game", "subtitle": "Tsuihou sareta Tensei Juukishi wa Game Chishiki de Musou suru, The Exiled Heavy Knight Knows How to Game the System, The Exiled Reincarnated Heavy Knight is Unrivaled in Game Knowledge", "slug": "tsuihou-sareta-tensei-juukishi-wa-game-chishiki-de-musou-suru-a5993", "url": "https://animevietsub.news/phim/tsuihou-sareta-tensei-juukishi-wa-game-chishiki-de-musou-suru-a5993/", "watch_url": "https://animevietsub.news/phim/tsuihou-sareta-tensei-juukishi-wa-game-chishiki-de-musou-suru-a5993/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-pOh3qPSX4l.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-HGAXlhuoEp.jpg", "latest_episode": "18", "total_episodes": "18/26", "score": "7.1", "views": "1751707", "year": "", "studio": "GoHands", "quality": "FHD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Fantasy, Adventure, Action", "description": "Elma Edvan, người kế thừa của một gia tộc Thánh kiếm danh giá. Trong buổi lễ ban phước ở tuổi 15, Elma nhận được lớp nhân vật (class) Heavy Knight (Hiệp sĩ hạng nặng), một lớp nhân vật bị coi là vô dụng, chỉ số mất cân bằng và kỹ năng kém cỏi. Vì điều này, anh bị tước quyền thừa kế và bị trục xuất khỏi gia đình. Tuy nhiên, Elma thực chất là một người chuyển sinh có ký thạch về trò chơi mà anh từng chơi ở kiếp trước. Anh biết rằng trong trò chơi đó, Heavy Knight thực tế là lớp nhân vật mạnh nhất nếu được xây dựng đúng cách. Sử dụng kiến thức uyên thâm về cơ chế game, Elma bắt đầu hành trình chinh phục thế giới và chứng minh mọi người đã sai.", "embed_url": "https://stream.googleapiscdn.com/player/15539cec8ce11d4cc21b076d54f8b7c6aa01227d06fc61b65f91ebfdb88bde02?nextName=02&nextUrl=https%3A%2F%2Fanimevietsub.news%2Fphim%2Ftsuihou-sareta-tensei-juukishi-wa-game-chishiki-de-musou-suru-a5993%2Ftap-02-114463.html", "episodes_count": 0, "episodes": []}, {"id": "6093", "title": "Bức Tường Băng 2", "subtitle": "Koori no Jouheki 2nd Season, The Ramparts of Ice Season 2", "slug": "koori-no-jouheki-2nd-season-a6093", "url": "https://animevietsub.news/phim/koori-no-jouheki-2nd-season-a6093/", "watch_url": "https://animevietsub.news/phim/koori-no-jouheki-2nd-season-a6093/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-YUIiBxYhq8.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-JyZ3nrZU1F.jpg", "latest_episode": "05", "total_episodes": "05/??", "score": "9.3", "views": "195852", "year": "", "studio": "Studio KAI", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Slice of Life, School, Romance, Drama", "description": "Mùa 2 của Koori no Jouheki.", "embed_url": "https://stream.googleapiscdn.com/player/46f8c70b3c2f55dd3cc40e3740b18c76306d3fc31e475078c7ea6bd444b0b58c?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116227", "url": "https://animevietsub.news/phim/koori-no-jouheki-2nd-season-a6093/tap-03-116227.html", "label": "03"}, {"episode": "04", "id": "116401", "url": "https://animevietsub.news/phim/koori-no-jouheki-2nd-season-a6093/tap-04-116401.html", "label": "04"}, {"episode": "05", "id": "116508", "url": "https://animevietsub.news/phim/koori-no-jouheki-2nd-season-a6093/tap-05-116508.html", "label": "05"}]}, {"id": "6091", "title": "FX Senshi Kurumi-chan", "subtitle": "FX Fighter Kurumi-chan", "slug": "fx-senshi-kurumi-chan-a6091", "url": "https://animevietsub.news/phim/fx-senshi-kurumi-chan-a6091/", "watch_url": "https://animevietsub.news/phim/fx-senshi-kurumi-chan-a6091/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-tSuu64wyze.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-FMNZH327ZU.jpg", "latest_episode": "05", "total_episodes": "05/12", "score": "9", "views": "153293", "year": "", "studio": "Passione", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Slice of Life, Seinen, Psychological", "description": "Kurumi Fukuga, một nữ sinh đại học mang trong mình nỗi đau quá khứ lớn. Khi cô còn học cấp hai, mẹ cô đã bí mật dùng tiền gia đình để chơi giao dịch ký quỹ ngoại hối (FX) và thua lỗ tới 20 triệu yên sau cuộc khủng hoảng tài chính toàn cầu (khủng hoảng Lehman Brothers). Quá tuyệt vọng và tội lỗi, mẹ cô đã nhảy lầu tự tử.", "embed_url": "https://stream.googleapiscdn.com/player/bb6f8caca9a4858ee2c6695106885a3541525c84e745e62f258e131aa750cdff?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116226", "url": "https://animevietsub.news/phim/fx-senshi-kurumi-chan-a6091/tap-03-116226.html", "label": "03"}, {"episode": "04", "id": "116400", "url": "https://animevietsub.news/phim/fx-senshi-kurumi-chan-a6091/tap-04-116400.html", "label": "04"}, {"episode": "05", "id": "116507", "url": "https://animevietsub.news/phim/fx-senshi-kurumi-chan-a6091/tap-05-116507.html", "label": "05"}]}, {"id": "6084", "title": "Ushiro no Shoumen Kamui-san", "subtitle": "KAMUI: He's Behind You, Kamui-san in the Back", "slug": "ushiro-no-shoumen-kamui-san-a6084", "url": "https://animevietsub.news/phim/ushiro-no-shoumen-kamui-san-a6084/", "watch_url": "https://animevietsub.news/phim/ushiro-no-shoumen-kamui-san-a6084/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-UnyYWA8erG.jpg", "backdrop_url": "https://animevietsub.news/statics/default/images/bg/bg-17.jpg", "latest_episode": "09", "total_episodes": "09/12", "score": "8.7", "views": "293257", "year": "", "studio": "Zero-G, ZG-R", "quality": "HD", "rating": "R+ - Dành cho 16 tuổi trở lên", "genres": "Supernatural, Comedy", "description": "Shizuka là một nữ sinh trung học bình thường nhưng lại có khả năng nhìn thấy ma. Vì có cơ địa đặc biệt hay thu hút các hồn ma, cô làm trợ lý cho Kamui – một nhà ngoại cảm nổi tiếng. Kamui rất tự hào về năng lực ngoại cảm thượng thừa của mình, nhưng cách anh trừ tà lại vô cùng khác thường!", "embed_url": "https://stream.googleapiscdn.com/player/ba5039fd5e344579074e4752092cff32071c6fa06b72c974c60570718e7083b5?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "07", "id": "116315", "url": "https://animevietsub.news/phim/ushiro-no-shoumen-kamui-san-a6084/tap-07-116315.html", "label": "07"}, {"episode": "08", "id": "116316", "url": "https://animevietsub.news/phim/ushiro-no-shoumen-kamui-san-a6084/tap-08-116316.html", "label": "08"}, {"episode": "09", "id": "116506", "url": "https://animevietsub.news/phim/ushiro-no-shoumen-kamui-san-a6084/tap-09-116506.html", "label": "09"}]}, {"id": "6126", "title": "Mahou no Shimai Lulutto Lilly Part 2", "subtitle": "Magical Sisters Lulutto Lilly Part 2", "slug": "mahou-no-shimai-lulutto-lilly-part-2-a6126", "url": "https://animevietsub.news/phim/mahou-no-shimai-lulutto-lilly-part-2-a6126/", "watch_url": "https://animevietsub.news/phim/mahou-no-shimai-lulutto-lilly-part-2-a6126/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-hCkvlZN1aX.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-PFlF8BMrf7.jpg", "latest_episode": "16", "total_episodes": "04/??", "score": "8.5", "views": "80979", "year": "", "studio": "Studio Pierrot", "quality": "FHD", "rating": "G - Mọi lứa tuổi", "genres": "Shoujo, Fantasy, Magic", "description": "Phần 2 của Mahou no Shimai Lulutto Lilly.", "embed_url": "https://stream.googleapiscdn.com/player/4d54238f9760641ba1a99ec1b79163aefb5551fdf740dbd66385b7eda7506d4d?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "14", "id": "116245", "url": "https://animevietsub.news/phim/mahou-no-shimai-lulutto-lilly-part-2-a6126/tap-14-116245.html", "label": "14"}, {"episode": "15", "id": "116314", "url": "https://animevietsub.news/phim/mahou-no-shimai-lulutto-lilly-part-2-a6126/tap-15-116314.html", "label": "15"}, {"episode": "16", "id": "116505", "url": "https://animevietsub.news/phim/mahou-no-shimai-lulutto-lilly-part-2-a6126/tap-16-116505.html", "label": "16"}]}, {"id": "6076", "title": "Ma Thuật Đặc Biệt Của Phù Thủy Quay Ngược Thời Gian 2", "subtitle": "Kikansha no Mahou wa Tokubetsu desu 2nd Season, A Returner's Magic Should Be Special Season 2, Gwihwanja-ui Mabeop-eun Teukbyeol-haeya Hamnida", "slug": "kikansha-no-mahou-wa-tokubetsu-desu-2nd-season-a6076", "url": "https://animevietsub.news/phim/kikansha-no-mahou-wa-tokubetsu-desu-2nd-season-a6076/", "watch_url": "https://animevietsub.news/phim/kikansha-no-mahou-wa-tokubetsu-desu-2nd-season-a6076/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-CaIcw0SEcU.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-k1eMTujtOj.webp", "latest_episode": "04", "total_episodes": "04/??", "score": "9", "views": "468645", "year": "", "studio": "Arvo Animation", "quality": "FHD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "School, Fantasy, Magic, Action", "description": "Tiếp tục câu chuyện từ mùa 1, mùa 2 sẽ tập trung vào hành trình của Desir Arman cùng các đồng đội thuộc lớp Alpha. Dựa trên những ký ức từ tương lai và kiến thức từ kiếp trước, Desir sẽ thực hiện những bước đi táo bạo hơn nhằm thay đổi quỹ đạo lịch sử, huấn luyện các bạn học của mình trở nên mạnh mẽ vượt bậc nhằm chuẩn bị đối phó với thảm họa Thế Giới Bóng Đêm trong tương lai.", "embed_url": "https://stream.googleapiscdn.com/player/3117fa004cf0c77f36dbad8ebc9e1beb8335aee5af24076ded2e2b10cdb00c7a?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116224", "url": "https://animevietsub.news/phim/kikansha-no-mahou-wa-tokubetsu-desu-2nd-season-a6076/tap-02-116224.html", "label": "02"}, {"episode": "03", "id": "116387", "url": "https://animevietsub.news/phim/kikansha-no-mahou-wa-tokubetsu-desu-2nd-season-a6076/tap-03-116387.html", "label": "03"}, {"episode": "04", "id": "116504", "url": "https://animevietsub.news/phim/kikansha-no-mahou-wa-tokubetsu-desu-2nd-season-a6076/tap-04-116504.html", "label": "04"}]}, {"id": "6130", "title": "Thú Vương Võ Thần Dandivine", "subtitle": "Juuou Mujin Dandivine, Dandivine, Beast King War God Dandivine", "slug": "juuou-mujin-dandivine-a6130", "url": "https://animevietsub.news/phim/juuou-mujin-dandivine-a6130/", "watch_url": "https://animevietsub.news/phim/juuou-mujin-dandivine-a6130/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-ICGvFoXBN0.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-TFeTSJE0xW.jpg", "latest_episode": "04", "total_episodes": "04/12", "score": "7.4", "views": "107159", "year": "", "studio": "LIDENFILMS, Kayac Animation", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Sci-Fi, Comedy, Adventure, Mecha, Action", "description": "20 năm sau khi siêu robot Dandivine đánh bại chủng tộc xâm lược bí ẩn mang tên Aposdoll, mang lại hòa bình lâu dài cho Trái Đất. Tuy nhiên, hòa bình kéo dài lại khiến Kasuga, một công ty sản xuất đồ chơi từng phất lên nhờ ăn theo các sản phẩm thương mại của Dandivine rơi vào tình cảnh suy thoái nghiêm trọng do robot không còn xuất hiện. Trong cơn tuyệt vọng để cứu vãn công ty, chủ tịch Genjuro Shijima đã cầu nguyện cho Dandivine hồi sinh. Ngay sau đó, hiểm họa Aposdoll đột ngột quay trở lại. Gekiha Shijima, một nam sinh trung học, đã được người chú của mình là Yusaku Kuroiwa mời tham gia để tự mình điều khiển thực thể robot khổng lồ này nhằm bảo vệ thế giới một lần nữa.", "embed_url": "https://stream.googleapiscdn.com/player/5df45a7e15822ee56df26fd41eb793ab743e687776b3dc5e2e01b04bfc09945e?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116225", "url": "https://animevietsub.news/phim/juuou-mujin-dandivine-a6130/tap-02-116225.html", "label": "02"}, {"episode": "03", "id": "116385", "url": "https://animevietsub.news/phim/juuou-mujin-dandivine-a6130/tap-03-116385.html", "label": "03"}, {"episode": "04", "id": "116503", "url": "https://animevietsub.news/phim/juuou-mujin-dandivine-a6130/tap-04-116503.html", "label": "04"}]}, {"id": "6120", "title": "Aoki Denshou Welsh & Shedar", "subtitle": "Welsh & Shedar", "slug": "aoki-denshou-welsh-shedar-a6120", "url": "https://animevietsub.news/phim/aoki-denshou-welsh-shedar-a6120/", "watch_url": "https://animevietsub.news/phim/aoki-denshou-welsh-shedar-a6120/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-1QQxtGzI8C.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-W54Jx2XAKm.webp", "latest_episode": "04", "total_episodes": "04/12", "score": "7.9", "views": "109067", "year": "", "studio": "Studio Massket", "quality": "HD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Fantasy, Adventure", "description": "Welsh, một thiếu niên vùng nông thôn có niềm đam mê nấu nướng mãnh liệt, và Shedar, vị hoàng tử trẻ tuổi mang định mệnh trở thành vua. Cuộc sống của họ hoàn toàn đảo lộn sau khi một con hắc long tấn công ngôi làng của Welsh.", "embed_url": "https://stream.googleapiscdn.com/player/eed9877ad64e8b254bc5f151a33f63a4694b7403a4e08998a1ac795b2cf74751?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "01", "id": "116005", "url": "https://animevietsub.news/phim/aoki-denshou-welsh-shedar-a6120/tap-01-116005.html", "label": "01"}, {"episode": "02", "id": "116078", "url": "https://animevietsub.news/phim/aoki-denshou-welsh-shedar-a6120/tap-02-116078.html", "label": "02"}, {"episode": "04", "id": "116502", "url": "https://animevietsub.news/phim/aoki-denshou-welsh-shedar-a6120/tap-04-116502.html", "label": "04"}]}, {"id": "6066", "title": "Chuyển Sinh Thành Kiếm 2", "subtitle": "Tensei shitara Ken deshita II, Reincarnated as a Sword Season 2, I became the sword by transmigrating 2nd Season, TenKen 2", "slug": "tensei-shitara-ken-deshita-II-a6066", "url": "https://animevietsub.news/phim/tensei-shitara-ken-deshita-II-a6066/", "watch_url": "https://animevietsub.news/phim/tensei-shitara-ken-deshita-II-a6066/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-HCDXFh6sji.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-DvPg8j0xc7.jpg", "latest_episode": "05", "total_episodes": "05/12", "score": "9.6", "views": "590052", "year": "", "studio": "C2C", "quality": "FHD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Fantasy, Adventure, Action", "description": "Tiếp nối hành trình của Fran và Sư phụ sau khi rời thị trấn Alessa. Phần này đưa hai thầy trò đến hai địa danh hoàn toàn mới: một hòn đảo lơ lửng trên bầu trời đầy cạm bẫy và thành phố cảng Seedrun sầm uất nhưng bất ổn. Tại đây, họ phải đối mặt với những hầm ngục nguy hiểm trên không, các trận hải chiến khốc liệt với thủy quái, đồng thời chạm trán với nhiều mạo hiểm giả cấp cao và những thế lực ngầm. Mùa mới hứa hẹn sẽ bùng nổ với các phân cảnh hành động hoành tráng hơn, giúp Fran ngày càng mạnh mẽ và tiến gần hơn đến mục tiêu tiến hóa chủng tộc của mình.", "embed_url": "https://stream.googleapiscdn.com/player/d762a71e1290c994d4365b00c551d42035b6ccc72f5bc98eeed5cddd37d64edc?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "03", "id": "116223", "url": "https://animevietsub.news/phim/tensei-shitara-ken-deshita-II-a6066/tap-03-116223.html", "label": "03"}, {"episode": "04", "id": "116384", "url": "https://animevietsub.news/phim/tensei-shitara-ken-deshita-II-a6066/tap-04-116384.html", "label": "04"}, {"episode": "05", "id": "116501", "url": "https://animevietsub.news/phim/tensei-shitara-ken-deshita-II-a6066/tap-05-116501.html", "label": "05"}]}, {"id": "6108", "title": "Shin Tennis no Oujisama: U-17 World Cup - Kesshou Member Ketteisen", "subtitle": "The Prince of Tennis II: U-17 World Cup - Final Member Selection Match", "slug": "shin-tennis-no-oujisama-u-17-world-cup-kesshou-member-ketteisen-a6108", "url": "https://animevietsub.news/phim/shin-tennis-no-oujisama-u-17-world-cup-kesshou-member-ketteisen-a6108/", "watch_url": "https://animevietsub.news/phim/shin-tennis-no-oujisama-u-17-world-cup-kesshou-member-ketteisen-a6108/xem-phim.html", "poster_url": "https://cdn.animevietsub.news/data/poster/animevsub-HKXMcRyQd4.jpg", "backdrop_url": "https://cdn.animevietsub.news/data/big_banner/animevsub-6WUMJmNT8g.jpg", "latest_episode": "04", "total_episodes": "04/13", "score": "7.1", "views": "97809", "year": "", "studio": "M.S.C", "quality": "FHD", "rating": "PG-13 - Teens 13 tuổi trở lên", "genres": "Sports", "description": "Sau khi đội tuyển Nhật Bản lọt vào trận chung kết U-17 World Cup, thử thách lớn nhất trước khi đối đầu với Tây Ban Nha lại diễn ra chính nội bộ đội bóng. Số lượng tuyển thủ ưu tú vượt quá số suất có hạn trong danh sách thi đấu chính thức, biến những người đồng đội thành đối thủ của nhau trong các trận tuyển chọn khốc liệt.", "embed_url": "https://stream.googleapiscdn.com/player/515056c6331d962aa47054ec52611c89fba92edc670f43b74d6b23c2ffe30145?isFinal=1", "episodes_count": 3, "episodes": [{"episode": "02", "id": "116036", "url": "https://animevietsub.news/phim/shin-tennis-no-oujisama-u-17-world-cup-kesshou-member-ketteisen-a6108/tap-02-116036.html", "label": "02"}, {"episode": "03", "id": "116246", "url": "https://animevietsub.news/phim/shin-tennis-no-oujisama-u-17-world-cup-kesshou-member-ketteisen-a6108/tap-03-116246.html", "label": "03"}, {"episode": "04", "id": "116500", "url": "https://animevietsub.news/phim/shin-tennis-no-oujisama-u-17-world-cup-kesshou-member-ketteisen-a6108/tap-04-116500.html", "label": "04"}]}];
+    
+    // Chuẩn hóa tiếng Việt không dấu
+    function normalizeVi(str) {
+      if (!str) return "";
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "d")
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    RAW_DATA.forEach(item => {
+      item._searchNorm = normalizeVi(`${item.title} ${item.subtitle} ${item.studio} ${item.slug} ${item.genres} ${item.description} tap ${item.latest_episode}`);
+      item._hasStream = !!item.embed_url;
+    });
+
+    let filteredList = [];
+    let displayedCount = 0;
+    const PAGE_SIZE = 48;
+    let currentItem = null;
+
+    // Elements
+    const grid = document.getElementById("movie-grid");
+    const statCount = document.getElementById("stat-count");
+    const filteredCount = document.getElementById("filtered-count");
+    const renderedInfo = document.getElementById("rendered-info");
+    const loadMoreContainer = document.getElementById("load-more-container");
+    const emptyState = document.getElementById("empty-state");
+    const searchInput = document.getElementById("search-input");
+    const searchClearBtn = document.getElementById("search-clear-btn");
+    const studioSelect = document.getElementById("studio-select");
+    const genreSelect = document.getElementById("genre-select");
+    const sortSelect = document.getElementById("sort-select");
+
+    // Hero Cinema elements
+    const cinemaSection = document.getElementById("cinema-section");
+    const cinemaTitle = document.getElementById("cinema-title");
+    const cinemaStudio = document.getElementById("cinema-studio");
+    const cinemaEp = document.getElementById("cinema-ep");
+    const cinemaIframe = document.getElementById("cinema-iframe");
+    const cinemaPlaceholder = document.getElementById("cinema-placeholder");
+    const cinemaExtLink = document.getElementById("cinema-ext-link");
+    const cinemaBadge = document.getElementById("cinema-badge");
+
+    statCount.textContent = RAW_DATA.length.toLocaleString('vi-VN');
+    initOptions();
+    applyFilters();
+
+    function initOptions() {
+      const studioMap = new Map();
+      const genreMap = new Map();
+
+      RAW_DATA.forEach(x => {
+        if (x.studio) {
+          studioMap.set(x.studio, (studioMap.get(x.studio) || 0) + 1);
+        }
+        if (x.genres) {
+          x.genres.split(",").map(g => g.trim()).filter(Boolean).forEach(g => {
+            genreMap.set(g, (genreMap.get(g) || 0) + 1);
+          });
+        }
+      });
+
+      Array.from(studioMap.entries()).sort((a, b) => b[1] - a[1]).forEach(([studio, count]) => {
+        const opt = document.createElement("option");
+        opt.value = studio;
+        opt.textContent = `${studio} (${count})`;
+        studioSelect.appendChild(opt);
+      });
+
+      Array.from(genreMap.entries()).sort((a, b) => b[1] - a[1]).forEach(([genre, count]) => {
+        const opt = document.createElement("option");
+        opt.value = genre;
+        opt.textContent = `${genre} (${count})`;
+        genreSelect.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      const rawQuery = (searchInput.value || "").trim();
+      const normQuery = normalizeVi(rawQuery);
+      const queryTokens = normQuery.split(" ").filter(Boolean);
+
+      searchClearBtn.classList.toggle("hidden", !rawQuery);
+
+      const studio = studioSelect.value;
+      const genre = genreSelect.value;
+      const sort = sortSelect.value;
+
+      filteredList = RAW_DATA.filter(item => {
+        if (queryTokens.length > 0) {
+          const isMatch = queryTokens.every(tok => item._searchNorm.includes(tok));
+          if (!isMatch) return false;
+        }
+
+        if (studio && item.studio !== studio) return false;
+        if (genre && (!item.genres || !item.genres.includes(genre))) return false;
+
+        return true;
+      });
+
+      if (sort === "title-asc") {
+        filteredList.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+      } else if (sort === "title-desc") {
+        filteredList.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+      } else if (sort === "views-desc") {
+        filteredList.sort((a, b) => (parseInt(b.views) || 0) - (parseInt(a.views) || 0));
+      } else if (sort === "score-desc") {
+        filteredList.sort((a, b) => (parseFloat(b.score) || 0) - (parseFloat(a.score) || 0));
+      }
+
+      filteredCount.textContent = filteredList.length.toLocaleString('vi-VN');
+      grid.innerHTML = "";
+      displayedCount = 0;
+      loadMore();
+
+      if (filteredList.length === 0) {
+        emptyState.classList.remove("hidden");
+      } else {
+        emptyState.classList.add("hidden");
+      }
+    }
+
+    function clearSearch() {
+      searchInput.value = "";
+      applyFilters();
+      searchInput.focus();
+    }
+
+    function loadMore() {
+      const nextBatch = filteredList.slice(displayedCount, displayedCount + PAGE_SIZE);
+      const fragment = document.createDocumentFragment();
+
+      nextBatch.forEach(item => {
+        fragment.appendChild(renderCard(item));
+      });
+
+      grid.appendChild(fragment);
+      displayedCount += nextBatch.length;
+
+      renderedInfo.textContent = `Đang hiển thị: ${displayedCount.toLocaleString('vi-VN')} / ${filteredList.length.toLocaleString('vi-VN')}`;
+
+      if (displayedCount < filteredList.length) {
+        loadMoreContainer.classList.remove("hidden");
+      } else {
+        loadMoreContainer.classList.add("hidden");
+      }
+    }
+
+    function renderCard(item) {
+      const card = document.createElement("div");
+      card.className = "group relative bg-slate-900/80 rounded-2xl overflow-hidden border border-slate-800/80 hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-950/30 transition-all duration-300 flex flex-col cursor-pointer";
+      
+      const poster = item.poster_url || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400";
+      const hasEmbed = !!item.embed_url;
+
+      card.innerHTML = `
+        <div class="relative aspect-[3/4] w-full bg-slate-950 overflow-hidden">
+          <img 
+            src="${poster}" 
+            alt="${item.title}" 
+            loading="lazy"
+            class="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onerror="this.src='https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400'"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity"></div>
+          
+          <!-- Badges -->
+          <div class="absolute top-2 left-2 flex flex-wrap gap-1">
+            <span class="px-2 py-0.5 rounded-md bg-sky-600/90 text-[10px] font-bold text-white shadow">
+              Tập ${item.latest_episode || '1'}
+            </span>
+            ${item.score ? `
+            <span class="px-1.5 py-0.5 rounded-md bg-amber-500/90 text-[10px] font-bold text-slate-950 flex items-center gap-0.5 shadow">
+              ★ ${item.score}
+            </span>` : ''}
+          </div>
+
+          ${hasEmbed ? `
+          <div class="absolute bottom-2 right-2">
+            <span class="px-2 py-0.5 rounded-md bg-emerald-500/95 text-[10px] font-bold text-slate-950 flex items-center gap-1 shadow">
+              <span>▶</span> Xem
+            </span>
+          </div>` : ''}
+        </div>
+
+        <div class="p-2.5 sm:p-3 flex-1 flex flex-col justify-between">
+          <div>
+            <h3 class="text-xs sm:text-sm font-bold text-slate-100 group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug">
+              ${item.title}
+            </h3>
+            <p class="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+              ${item.studio || "Anime"}
+            </p>
+          </div>
+        </div>
+      `;
+
+      card.onclick = () => selectMovie(item);
+      return card;
+    }
+
+    function selectMovie(item) {
+      currentItem = item;
+      const streamUrl = item.embed_url || item.watch_url;
+
+      cinemaTitle.textContent = `${item.title} - Tập ${item.latest_episode || '1'}`;
+      cinemaStudio.textContent = `Studio: ${item.studio || 'Anime'}`;
+      cinemaEp.textContent = `Tập ${item.latest_episode || '1'}`;
+      cinemaExtLink.href = item.watch_url || item.url || '#';
+
+      if (streamUrl) {
+        cinemaIframe.src = streamUrl;
+        cinemaIframe.classList.remove("hidden");
+        cinemaPlaceholder.classList.add("hidden");
+        cinemaBadge.textContent = "Đang phát";
+        cinemaBadge.className = "px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold";
+      } else {
+        cinemaIframe.src = "";
+        cinemaIframe.classList.add("hidden");
+        cinemaPlaceholder.classList.remove("hidden");
+        cinemaBadge.textContent = "Chưa có stream";
+        cinemaBadge.className = "px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-xs font-medium";
+      }
+
+      cinemaSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function reloadCinemaIframe() {
+      if (cinemaIframe && cinemaIframe.src) {
+        cinemaIframe.src = cinemaIframe.src;
+        showToast("Đang tải lại video...");
+      }
+    }
+
+    function copyEmbedIframe() {
+      if (!currentItem) {
+        showToast("Vui lòng chọn 1 phim trước!");
+        return;
+      }
+      const streamUrl = currentItem.embed_url || currentItem.watch_url;
+      if (!streamUrl) {
+        showToast("Phim này chưa có link stream!");
+        return;
+      }
+      const code = `<iframe src="${streamUrl}" width="100%" height="500" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+      navigator.clipboard.writeText(code).then(() => {
+        showToast("Đã chép mã iframe vào Clipboard!");
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 2500);
+    }
+
+    let searchTimeout = null;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyFilters, 150);
+    });
+
+    studioSelect.addEventListener("change", applyFilters);
+    genreSelect.addEventListener("change", applyFilters);
+    sortSelect.addEventListener("change", applyFilters);
+
+    if (RAW_DATA.length > 0) {
+      const first = RAW_DATA[0];
+      currentItem = first;
+      cinemaTitle.textContent = `${first.title} - Tập ${first.latest_episode || '1'}`;
+      cinemaStudio.textContent = `Studio: ${first.studio || 'Anime'}`;
+      cinemaEp.textContent = `Tập ${first.latest_episode || '1'}`;
+      cinemaExtLink.href = first.watch_url || first.url || '#';
+    }
+  </script>
+</body>
+</html>
