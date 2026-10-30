@@ -24,9 +24,18 @@ def get_lan_ip():
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
         s.close()
-        return ip
+        if ip and not ip.startswith("127."):
+            return ip
     except Exception:
-        return "127.0.0.1"
+        pass
+    try:
+        out = subprocess.check_output(["ip", "route", "get", "1"], stderr=subprocess.DEVNULL).decode()
+        for tok in out.split():
+            if tok.count(".") == 3 and not tok.startswith("127."):
+                return tok
+    except Exception:
+        pass
+    return "192.168.2.6"
 
 def ensure_ssl_certs():
     if not os.path.exists(CERT_FILE) or not os.path.exists(KEY_FILE):
