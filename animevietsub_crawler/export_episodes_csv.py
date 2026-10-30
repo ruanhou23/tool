@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 🎬 AnimeVietSub Episode Exporter & Stream Extractor
-Bóc tách toàn bộ danh sách tập của từng bộ anime kèm link stream view riêng cho từng tập.
+Bóc tách toàn bộ danh sách tập của từng bộ anime kèm link stream view thực tế cho từng tập.
 Xuất file data/episodes.csv chuẩn schema: name, view, img, year, info, link
 """
 
@@ -12,9 +12,8 @@ import json
 import csv
 import re
 import time
-import urllib.request
-import http.cookiejar
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from crawler import AnimeVietSubCrawler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -22,183 +21,169 @@ INPUT_JSON = os.path.join(DATA_DIR, "animevietsub_data.json")
 OUTPUT_EPISODES_CSV = os.path.join(DATA_DIR, "episodes.csv")
 OUTPUT_EPISODES_JSON = os.path.join(DATA_DIR, "episodes_data.json")
 
-BASE_URL = "https://animevietsub.news"
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+def process_all_episodes(fetch_remote_streams=True, max_workers=3):
+    if not os.path.exists(INPUT_JSON):
+        print(f"❌ Không tìm thấy file dữ liệu gốc: {INPUT_JSON}")
+        return []
 
-class EpisodeExtractor:
-    def __init__(self):
-        self.cookie_jar = http.cookiejar.CookieJar()
-        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookie_jar))
-        self.headers = {
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "vi,en-US;q=0.9,en;q=0.8",
-            "Referer": BASE_URL,
-        }
+    with open(INPUT_JSON, "r", encoding="utf-8") as f:
+        anime_list = json.load(f)
 
-    def fetch_stream(self, ep_url, retries=2):
-        """Bóc tách link Stream Embed từ trang xem tập cụ thể."""
-        if not ep_url:
-            return ""
-        ep_url = re.sub(r'^https?://animevietsub\.[a-z0-9]+', BASE_URL, ep_url)
-        if ep_url.startswith("/"):
-            ep_url = f"{BASE_URL}{ep_url}"
+    crawler = AnimeVietSubCrawler()
 
-        for attempt in range(retries):
-            try:
-                req = urllib.request.Request(ep_url, headers=self.headers)
-                with self.opener.open(req, timeout=8) as resp:
-                    content = resp.read().decode("utf-8", errors="ignore")
-                    m = re.search(r'window\.PLAYER_DATA\s*=\s*(\{.*?\});', content)
-                    if m:
-                        data = json.loads(m.group(1))
-                        return data.get("link", "")
-                    link_m = re.search(r'[\"\']link[\"\']\s*:\s*[\"\'](https?://[^\s\"\'\\]+)[\"\']', content)
-                    if link_m:
-                        return link_m.group(1).replace(r"\/", "/")
-            except Exception:
-                time.sleep(0.3)
-        return ""
+    print("=" * 65)
+    print(f"🎬 BẮT ĐẦU BÓC TÁCH LINK STREAM THỰC TẾ CHO MỌI TẬP PHIM")
+    print(f"📁 Tổng số anime:  {len(anime_list)}")
+    print(f"⚡ Luồng cào:       {max_workers}")
+    print("=" * 65)
 
-    def process_all_episodes(self, fetch_remote_streams=False, max_workers=3):
-        """Duyệt toàn bộ anime và bóc tách từng tập riêng biệt."""
-        if not os.path.exists(INPUT_JSON):
-            print(f"❌ Không tìm thấy file dữ liệu gốc: {INPUT_JSON}")
-            return []
+    all_episodes = []
 
-        with open(INPUT_JSON, "r", encoding="utf-8") as f:
-            anime_list = json.load(f)
+    for anime in anime_list:
+        title = anime.get("title", "")
+        views = anime.get("views", "")
+        poster = anime.get("poster_url", "")
+        year = anime.get("year", "")
+        studio = anime.get("studio", "")
+        genres = anime.get("genres", "")
+        desc = anime.get("description", "")
+        latest_stream = anime.get("embed_url", "")
 
-        print("=" * 65)
-        print(f"🎬 BẮT ĐẦU BÓC TÁCH TOÀN BỘ CÁC TẬP PHIM ({len(anime_list)} ANIME)")
-        print(f"🌐 Lấy link stream trực tiếp từ web: {'BẬT' if fetch_remote_streams else 'TẮT (Dùng link đã lưu/fallback)'}")
-        print("=" * 65)
+        episodes = anime.get("episodes", [])
+        if not episodes:
+            ep_num = str(anime.get("latest_episode", "")).strip() or "Full"
+            all_episodes.append({
+                "anime_id": anime.get("id"),
+                "anime_title": title,
+                "episode": ep_num,
+                "label": f"Tập {ep_num}" if ep_num.isdigit() else ep_num,
+                "name": f"{title} - Tập {ep_num}" if ep_num.isdigit() else f"{title} ({ep_num})",
+                "views": views,
+                "poster": poster,
+                "year": year,
+                "studio": studio,
+                "genres": genres,
+                "description": desc,
+                "url": anime.get("watch_url") or anime.get("url"),
+                "stream_link": latest_stream or anime.get("watch_url") or anime.get("url"),
+            })
+        else:
+            for idx, ep in enumerate(episodes):
+                ep_num = str(ep.get("episode", "")).strip()
+                ep_url = ep.get("url", "")
+                is_latest = (idx == len(episodes) - 1)
+                existing_stream = ep.get("stream_link", "") or (latest_stream if is_latest else "")
 
-        all_episodes = []
-
-        for anime in anime_list:
-            title = anime.get("title", "")
-            views = anime.get("views", "")
-            poster = anime.get("poster_url", "")
-            year = anime.get("year", "")
-            studio = anime.get("studio", "")
-            genres = anime.get("genres", "")
-            desc = anime.get("description", "")
-            latest_stream = anime.get("embed_url", "")
-
-            episodes = anime.get("episodes", [])
-            if not episodes:
-                # Nếu anime không có danh sách tập con (phim lẻ / movie / chưa chia tập)
-                ep_num = str(anime.get("latest_episode", "")).strip() or "Full"
                 all_episodes.append({
+                    "anime_id": anime.get("id"),
                     "anime_title": title,
                     "episode": ep_num,
-                    "label": f"Tập {ep_num}" if ep_num.isdigit() else ep_num,
-                    "name": f"{title} - Tập {ep_num}" if ep_num.isdigit() else f"{title} ({ep_num})",
+                    "label": f"Tập {ep_num}",
+                    "name": f"{title} - Tập {ep_num}",
                     "views": views,
                     "poster": poster,
                     "year": year,
                     "studio": studio,
                     "genres": genres,
                     "description": desc,
-                    "url": anime.get("watch_url") or anime.get("url"),
-                    "stream_link": latest_stream or anime.get("watch_url") or anime.get("url"),
+                    "url": ep_url,
+                    "stream_link": existing_stream,
+                    "_ep_ref": ep
                 })
-            else:
-                for idx, ep in enumerate(episodes):
-                    ep_num = str(ep.get("episode", "")).strip()
-                    ep_url = ep.get("url", "")
-                    
-                    # Nếu là tập cuối cùng trong danh sách thì dùng link embed_url đã bóc nếu có
-                    is_latest = (idx == len(episodes) - 1)
-                    stream = latest_stream if is_latest and latest_stream else ""
 
-                    all_episodes.append({
-                        "anime_title": title,
-                        "episode": ep_num,
-                        "label": f"Tập {ep_num}",
-                        "name": f"{title} - Tập {ep_num}",
-                        "views": views,
-                        "poster": poster,
-                        "year": year,
-                        "studio": studio,
-                        "genres": genres,
-                        "description": desc,
-                        "url": ep_url,
-                        "stream_link": stream or ep_url,
-                    })
+    print(f"✅ Đã tổng hợp: {len(all_episodes)} tập phim từ {len(anime_list)} anime")
 
-        print(f"✅ Đã tổng hợp danh sách: {len(all_episodes)} tập phim từ {len(anime_list)} anime!")
+    if fetch_remote_streams:
+        missing_eps = [
+            ep for ep in all_episodes 
+            if not ep["stream_link"].startswith("https://stream.googleapiscdn.com")
+        ]
+        print(f"\n🔍 Đang bóc link stream player thực tế cho {len(missing_eps)} tập...")
+        start_t = time.time()
+        done = 0
 
-        # Bóc remote stream nếu được kích hoạt
-        if fetch_remote_streams:
-            missing = [ep for ep in all_episodes if not ep["stream_link"].startswith("https://stream.googleapiscdn.com")]
-            print(f"🔍 Đang truy vấn link stream cho {len(missing)} tập phim ({max_workers} luồng)...")
-            done = 0
+        def stream_worker(ep_item):
+            time.sleep(0.15)
+            link = crawler.fetch_stream_embed(ep_item["url"])
+            return ep_item, link
 
-            def worker(item):
-                st = self.fetch_stream(item["url"])
-                return item, st
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(stream_worker, ep) for ep in missing_eps]
+            for fut in as_completed(futures):
+                done += 1
+                try:
+                    ep_item, link = fut.result()
+                    if link:
+                        ep_item["stream_link"] = link
+                        if "_ep_ref" in ep_item:
+                            ep_item["_ep_ref"]["stream_link"] = link
+                except Exception:
+                    pass
 
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [executor.submit(worker, item) for item in missing]
-                for fut in as_completed(futures):
-                    done += 1
-                    try:
-                        it, st = fut.result()
-                        if st:
-                            it["stream_link"] = st
-                    except Exception:
-                        pass
-                    if done % 15 == 0 or done == len(missing):
-                        print(f"  [{done}/{len(missing)}] Đã kiểm tra link stream")
+                if done % 10 == 0 or done == len(missing_eps):
+                    elapsed = time.time() - start_t
+                    rate = done / max(elapsed, 0.1)
+                    print(f"  [{done}/{len(missing_eps)}] Bóc link stream | Tốc độ: {rate:.1f} tập/s")
 
-        # Lưu ra JSON
-        with open(OUTPUT_EPISODES_JSON, "w", encoding="utf-8") as f:
-            json.dump(all_episodes, f, ensure_ascii=False, indent=2)
+    # Lưu lại vào animevietsub_data.json để các tập có sẵn stream_link
+    for ep in all_episodes:
+        if "_ep_ref" in ep:
+            del ep["_ep_ref"]
 
-        # Lưu ra CSV chuẩn: name, view, img, year, info, link
-        csv_rows = []
-        for ep in all_episodes:
-            info_parts = []
-            if ep.get("studio"):
-                info_parts.append(f"Studio: {ep['studio']}")
-            if ep.get("genres"):
-                info_parts.append(f"Thể loại: {ep['genres']}")
-            if ep.get("description"):
-                info_parts.append(ep["description"][:160] + "...")
-            info = " | ".join(info_parts)
+    with open(INPUT_JSON, "w", encoding="utf-8") as f:
+        json.dump(anime_list, f, ensure_ascii=False, indent=2)
 
-            csv_rows.append({
-                "name": ep["name"],
-                "view": ep["views"],
-                "img": ep["poster"],
-                "year": ep["year"],
-                "info": info,
-                "link": ep["stream_link"]
-            })
+    with open(OUTPUT_EPISODES_JSON, "w", encoding="utf-8") as f:
+        json.dump(all_episodes, f, ensure_ascii=False, indent=2)
 
-        fieldnames = ["name", "view", "img", "year", "info", "link"]
-        with open(OUTPUT_EPISODES_CSV, "w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(csv_rows)
+    # Xuất file episodes.csv chuẩn: name, view, img, year, info, link
+    csv_rows = []
+    for ep in all_episodes:
+        info_parts = []
+        if ep.get("studio"):
+            info_parts.append(f"Studio: {ep['studio']}")
+        if ep.get("genres"):
+            info_parts.append(f"Thể loại: {ep['genres']}")
+        if ep.get("description"):
+            info_parts.append(ep["description"][:160] + "...")
+        info = " | ".join(info_parts)
 
-        print("\n" + "=" * 65)
-        print(f"🎉 ĐÃ XUẤT THÀNH CÔNG {len(csv_rows)} TẬP PHIM:")
-        print(f"📁 1. File CSV từng tập:  {OUTPUT_EPISODES_CSV}")
-        print(f"📁 2. File JSON chi tiết: {OUTPUT_EPISODES_JSON}")
-        print("=" * 65)
-        return all_episodes
+        csv_rows.append({
+            "name": ep["name"],
+            "view": ep["views"],
+            "img": ep["poster"],
+            "year": ep["year"],
+            "info": info,
+            "link": ep["stream_link"] or ep["url"]
+        })
+
+    fieldnames = ["name", "view", "img", "year", "info", "link"]
+    with open(OUTPUT_EPISODES_CSV, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(csv_rows)
+
+    with_stream = len([x for x in all_episodes if x.get("stream_link", "").startswith("https://stream.googleapiscdn.com")])
+    print("\n" + "=" * 65)
+    print(f"🎉 ĐÃ HOÀN TẤT BÓC LINK STREAM CHO {len(csv_rows)} TẬP PHIM:")
+    print(f"▶️ Số tập có link stream player trực tiếp: {with_stream} / {len(all_episodes)}")
+    print(f"📁 1. File CSV từng tập:  {OUTPUT_EPISODES_CSV}")
+    print(f"📁 2. File JSON chi tiết: {OUTPUT_EPISODES_JSON}")
+    print("=" * 65)
+
+    # Tự động cập nhật lại Web Viewer
+    gen_web = os.path.join(BASE_DIR, "generate_web.py")
+    if os.path.exists(gen_web):
+        os.system(f"python3 {gen_web}")
+
+    return all_episodes
 
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="AnimeVietSub Episode Exporter")
-    parser.add_argument("--fetch-stream", action="store_true", help="Gửi request bóc link stream online")
+    parser = argparse.ArgumentParser(description="AnimeVietSub Episode Stream Extractor")
     parser.add_argument("-w", "--workers", type=int, default=3, help="Số luồng song song")
     args = parser.parse_args()
 
-    extractor = EpisodeExtractor()
-    extractor.process_all_episodes(fetch_remote_streams=args.fetch_stream, max_workers=args.workers)
+    process_all_episodes(fetch_remote_streams=True, max_workers=args.workers)
