@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Dual HTTP + HTTPS Local Web Server & Cinema Streaming Player
-Hỗ trợ cả HTTP và HTTPS trên cùng cổng 8088 (giải quyết triệt để lỗi điện thoại tự thêm https://)
+Hỗ trợ cả HTTP và HTTPS trên cùng cổng 8088
+Tối ưu hóa đặc biệt cho điện thoại di động (iPhone / Android) và Desktop
 """
 
 import http.server
@@ -116,96 +117,186 @@ EMBED_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Trình phát phim nội bộ</title>
+  <title>Trình phát phim</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/artplayer@5.1.6/dist/artplayer.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
     .artplayer-app { width: 100%; height: 100%; }
-    .loading-spin {
+    
+    .overlay-state {
       position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; color: #fff; font-family: sans-serif; gap: 12px;
-      z-index: 10; background: #000;
+      align-items: center; justify-content: center; color: #fff; gap: 14px;
+      z-index: 20; background: rgba(5, 5, 8, 0.95); padding: 20px; text-align: center;
     }
     .spinner {
-      width: 42px; height: 42px; border: 4px solid rgba(255,255,255,0.2);
+      width: 44px; height: 44px; border: 4px solid rgba(255,255,255,0.15);
       border-top-color: #f43f5e; border-radius: 50%; animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .play-btn-large {
+      width: 72px; height: 72px; border-radius: 50%; background: #f43f5e;
+      color: #fff; border: none; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; box-shadow: 0 8px 30px rgba(244, 63, 94, 0.5);
+      transition: transform 0.2s;
+    }
+    .play-btn-large:active { transform: scale(0.95); }
+    .play-btn-large svg { width: 34px; height: 34px; margin-left: 4px; fill: currentColor; }
+
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
+      border-radius: 12px; background: #27272a; color: #f4f4f5; text-decoration: none;
+      font-size: 13px; font-weight: 600; border: 1px solid #3f3f46; cursor: pointer;
+    }
+    .btn-action:hover { background: #3f3f46; }
   </style>
 </head>
 <body>
   <div class="artplayer-app" id="player"></div>
-  <div id="loading" class="loading-spin">
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="overlay-state">
     <div class="spinner"></div>
-    <span style="font-size: 14px; opacity: 0.85;">Đang nạp video...</span>
+    <span style="font-size: 14px; color: #a1a1aa;">Đang khởi tạo trình phát video...</span>
+  </div>
+
+  <!-- Mobile Touch to Play Overlay -->
+  <div id="touch-play-overlay" class="overlay-state" style="display: none;">
+    <button class="play-btn-large" onclick="startPlay()">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <span style="font-size: 15px; font-weight: 600; color: #fff;">Chạm để phát video</span>
+    <span style="font-size: 12px; color: #71717a;">Hỗ trợ chuẩn Full HD 1080p / 720p</span>
+  </div>
+
+  <!-- Error Overlay -->
+  <div id="error-overlay" class="overlay-state" style="display: none;">
+    <span style="font-size: 28px;">⚠️</span>
+    <span id="error-msg" style="font-size: 14px; color: #f43f5e; max-width: 360px;">Không thể tải luồng video trực tiếp.</span>
+    <div style="display: flex; gap: 10px; margin-top: 6px;">
+      <button class="btn-action" onclick="location.reload()">🔄 Thử lại</button>
+      <a class="btn-action" id="fallback-ext-btn" href="#" target="_blank">↗ Mở tab mới</a>
+    </div>
   </div>
 
   <script>
     const videoId = "__VIDEO_ID__";
     const m3u8Url = "/api/m3u8?v=" + encodeURIComponent(videoId);
+    document.getElementById("fallback-ext-btn").href = "https://x.haiten.org/watch?v=" + videoId;
 
-    function playM3u8(video, url, art) {{
-      if (Hls.isSupported()) {{
-        if (art.hls) art.hls.destroy();
-        const hls = new Hls({{
-          enableWorker: true,
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    let art = null;
+
+    function playM3u8(video, url, artInstance) {
+      if (Hls.isSupported()) {
+        if (artInstance.hls) artInstance.hls.destroy();
+        const hls = new Hls({
+          enableWorker: false,
           lowLatencyMode: false,
-          backBufferLength: 90
-        }});
+          backBufferLength: 60
+        });
         hls.loadSource(url);
         hls.attachMedia(video);
-        art.hls = hls;
-        art.on('destroy', () => hls.destroy());
-      }} else if (video.canPlayType('application/vnd.apple.mpegurl')) {{
+        artInstance.hls = hls;
+        artInstance.on('destroy', () => hls.destroy());
+
+        hls.on(Hls.Events.ERROR, function (event, data) {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                showError("Lỗi kết nối máy chủ video CDN");
+                break;
+            }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
-      }} else {{
-        art.notice.show = 'Trình duyệt không hỗ trợ HLS';
-      }}
-    }}
+      } else {
+        showError("Trình duyệt không hỗ trợ định dạng video này.");
+      }
+    }
 
-    const art = new Artplayer({{
-      container: '#player',
-      url: m3u8Url,
-      type: 'm3u8',
-      customType: {{
-        m3u8: playM3u8
-      }},
-      volume: 0.8,
-      isLive: false,
-      muted: false,
-      autoplay: true,
-      pip: true,
-      autoSize: true,
-      autoMini: true,
-      screenshot: false,
-      setting: true,
-      playbackRate: true,
-      aspectRatio: true,
-      fullscreen: true,
-      fullscreenWeb: true,
-      miniProgressBar: true,
-      theme: '#f43f5e',
-      lang: 'vi',
-      moreVideoAttr: {{
-        crossOrigin: 'anonymous',
-        playsInline: true,
-        'webkit-playsinline': true,
-        'x5-playsinline': true
-      }}
-    }});
+    function initPlayer() {
+      art = new Artplayer({
+        container: '#player',
+        url: m3u8Url,
+        type: 'm3u8',
+        customType: {
+          m3u8: playM3u8
+        },
+        volume: 0.85,
+        isLive: false,
+        muted: false,
+        autoplay: !isMobile, // Trên PC tự phát, trên mobile đợi chạm
+        pip: true,
+        autoSize: true,
+        autoMini: true,
+        screenshot: false,
+        setting: true,
+        playbackRate: true,
+        aspectRatio: true,
+        fullscreen: true,
+        fullscreenWeb: true,
+        miniProgressBar: true,
+        theme: '#f43f5e',
+        lang: 'vi',
+        moreVideoAttr: {
+          crossOrigin: 'anonymous',
+          playsInline: true,
+          'webkit-playsinline': true,
+          'x5-playsinline': true
+        }
+      });
 
-    art.on('ready', () => {{
-      const ld = document.getElementById('loading');
-      if (ld) ld.style.display = 'none';
-    }});
-    art.on('error', (err) => {{
-      const ld = document.getElementById('loading');
-      if (ld) {{
-        ld.innerHTML = '<span style="color:#f43f5e;font-size:13px;padding:16px;text-align:center;">⚠️ Không thể phát video trực tiếp. Nhấn mở trang gốc hoặc kiểm tra lại kết nối mạng.</span>';
-      }}
-    }});
+      art.on('ready', () => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        if (isMobile) {
+          // Hiện nút chạm để phát trên điện thoại
+          document.getElementById('touch-play-overlay').style.display = 'flex';
+        }
+      });
+
+      art.on('play', () => {
+        document.getElementById('touch-play-overlay').style.display = 'none';
+      });
+
+      art.on('error', (err) => {
+        showError("Lỗi giải mã luồng video hoặc mạng bị chặn.");
+      });
+    }
+
+    function startPlay() {
+      document.getElementById('touch-play-overlay').style.display = 'none';
+      if (art) {
+        art.play().catch(e => {
+          art.video.muted = true;
+          art.play();
+        });
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('loading-overlay').style.display = 'none';
+      document.getElementById('touch-play-overlay').style.display = 'none';
+      const errBox = document.getElementById('error-overlay');
+      document.getElementById('error-msg').textContent = msg;
+      errBox.style.display = 'flex';
+    }
+
+    // Khởi chạy
+    try {
+      initPlayer();
+    } catch (e) {
+      showError("Không thể nạp trình phát video: " + e.message);
+    }
   </script>
 </body>
 </html>
@@ -213,12 +304,20 @@ EMBED_TEMPLATE = """<!DOCTYPE html>
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
     def log_message(self, format, *args):
-        # Rút gọn log để không làm ngập console
+        # Log gọn gàng
         sys.stderr.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), format%args))
+
+    def handle(self):
+        try:
+            super().handle()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
+            pass
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -279,10 +378,8 @@ class DualProtocolServer(socketserver.ThreadingTCPServer):
     def get_request(self):
         sock, addr = self.socket.accept()
         try:
-            # Nhìn trộm 1 byte đầu tiên để xác định giao thức
             first_byte = sock.recv(1, socket.MSG_PEEK)
             if first_byte == b"\x16" and self.ssl_context:
-                # 0x16 = TLS Handshake ClientHello (HTTPS)
                 sock = self.ssl_context.wrap_socket(sock, server_side=True)
         except Exception:
             pass
@@ -293,7 +390,6 @@ def run():
     os.chdir(DIRECTORY)
     ensure_ssl_certs()
 
-    # Tự động tạo lại index.html nếu có dữ liệu mới
     gen_script = os.path.join(DIRECTORY, "generate_web.py")
     if os.path.exists(gen_script):
         os.system(f"python3 {gen_script}")
