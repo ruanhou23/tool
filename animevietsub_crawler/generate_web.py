@@ -135,6 +135,17 @@ html_content = f"""<!DOCTYPE html>
         </div>
       </div>
 
+      <!-- Cinema Episode Playlist Bar -->
+      <div id="cinema-episodes-wrapper" class="p-3 sm:p-3.5 bg-slate-950/90 border-t border-slate-800/80 hidden">
+        <div class="flex items-center gap-2.5 overflow-x-auto pb-1 text-xs">
+          <span class="text-sky-400 font-bold shrink-0 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+            <span>🎞️</span> Danh sách tập:
+          </span>
+          <div id="cinema-episodes-list" class="flex items-center gap-1.5 flex-nowrap shrink-0">
+          </div>
+        </div>
+      </div>
+
       <!-- Cinema Bottom Bar -->
       <div id="cinema-info-bar" class="p-3.5 sm:p-4 bg-slate-950/80 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
         <div class="flex items-center gap-2 text-slate-300 truncate">
@@ -464,6 +475,17 @@ html_content = f"""<!DOCTYPE html>
               ${{item.studio || "Anime"}}
             </p>
           </div>
+          ${{item.episodes && item.episodes.length > 0 ? `
+          <div class="mt-2.5 pt-2 border-t border-slate-800/60 flex flex-wrap gap-1 items-center">
+            <span class="text-[9px] text-slate-500 font-semibold uppercase">Tập:</span>
+            ${{item.episodes.map(e => `
+              <span 
+                onclick="event.stopPropagation(); selectMovieEpisode('${{item.id}}', '${{e.episode}}');"
+                class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-sky-500 hover:text-white text-[10px] text-slate-300 font-bold transition-all shadow-sm">
+                ${{e.episode}}
+              </span>
+            `).join('')}}
+          </div>` : ''}}
         </div>
       `;
 
@@ -471,20 +493,50 @@ html_content = f"""<!DOCTYPE html>
       return card;
     }}
 
-    function selectMovie(item) {{
-      currentItem = item;
-      const streamUrl = item.embed_url || item.watch_url;
+    function selectMovieEpisode(itemId, epNum) {{
+      const item = ALL_ITEMS.find(x => String(x.id) === String(itemId));
+      if (item) {{
+        playEpisode(item, epNum);
+        cinemaSection.scrollIntoView({{ behavior: "smooth", block: "start" }});
+      }}
+    }}
 
-      cinemaTitle.textContent = `${{item.title}} - Tập ${{item.latest_episode || '1'}}`;
+    function selectMovie(item) {{
+      if (!item) return;
+      const latestEp = (item.episodes && item.episodes.length > 0) ? item.episodes[item.episodes.length - 1].episode : item.latest_episode;
+      playEpisode(item, latestEp);
+      cinemaSection.scrollIntoView({{ behavior: "smooth", block: "start" }});
+    }}
+
+    function playEpisode(item, epNum) {{
+      if (!item) return;
+      currentItem = item;
+      currentEpisode = epNum || item.latest_episode || '1';
+
+      const foundEp = item.episodes ? item.episodes.find(e => String(e.episode) === String(currentEpisode)) : null;
+      const epLabel = currentEpisode;
+
+      cinemaTitle.textContent = `${{item.title}} - Tập ${{epLabel}}`;
       cinemaStudio.textContent = `Studio: ${{item.studio || 'Anime'}}`;
-      cinemaEp.textContent = `Tập ${{item.latest_episode || '1'}}`;
-      cinemaExtLink.href = item.watch_url || item.url || '#';
+      cinemaEp.textContent = `Tập ${{epLabel}}`;
+
+      const epUrl = foundEp ? foundEp.url : (item.watch_url || item.url);
+      cinemaExtLink.href = epUrl || '#';
+
+      let streamUrl = "";
+      if (foundEp && foundEp.stream_link) {{
+        streamUrl = foundEp.stream_link;
+      }} else if (String(currentEpisode) === String(item.latest_episode) && item.embed_url) {{
+        streamUrl = item.embed_url;
+      }} else {{
+        streamUrl = epUrl;
+      }}
 
       if (streamUrl) {{
         cinemaIframe.src = streamUrl;
         cinemaIframe.classList.remove("hidden");
         cinemaPlaceholder.classList.add("hidden");
-        cinemaBadge.textContent = "Đang phát";
+        cinemaBadge.textContent = `Đang phát tập ${{epLabel}}`;
         cinemaBadge.className = "px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold";
       }} else {{
         cinemaIframe.src = "";
@@ -494,7 +546,33 @@ html_content = f"""<!DOCTYPE html>
         cinemaBadge.className = "px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-xs font-medium";
       }}
 
-      cinemaSection.scrollIntoView({{ behavior: "smooth", block: "start" }});
+      // Hiển thị danh sách các tập phim
+      const epWrapper = document.getElementById("cinema-episodes-wrapper");
+      const epList = document.getElementById("cinema-episodes-list");
+      if (epWrapper && epList) {{
+        epList.innerHTML = "";
+        const episodes = item.episodes || [];
+        if (episodes.length > 0) {{
+          epWrapper.classList.remove("hidden");
+          episodes.forEach(e => {{
+            const btn = document.createElement("button");
+            const isActive = String(e.episode) === String(currentEpisode);
+            btn.className = `px-3 py-1 rounded-lg text-xs font-bold transition-all shrink-0 ${{
+              isActive
+                ? "bg-sky-500 text-white shadow-md shadow-sky-500/30 scale-105"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+            }}`;
+            btn.textContent = `Tập ${{e.episode}}`;
+            btn.onclick = (event) => {{
+              event.stopPropagation();
+              playEpisode(item, e.episode);
+            }};
+            epList.appendChild(btn);
+          }});
+        }} else {{
+          epWrapper.classList.add("hidden");
+        }}
+      }}
     }}
 
     function reloadCinemaIframe() {{
@@ -509,7 +587,7 @@ html_content = f"""<!DOCTYPE html>
         showToast("Vui lòng chọn 1 phim trước!");
         return;
       }}
-      const streamUrl = currentItem.embed_url || currentItem.watch_url;
+      const streamUrl = (cinemaIframe && cinemaIframe.src) ? cinemaIframe.src : (currentItem.embed_url || currentItem.watch_url);
       if (!streamUrl) {{
         showToast("Phim này chưa có link stream!");
         return;
