@@ -366,29 +366,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
 
-class DualProtocolServer(socketserver.ThreadingTCPServer):
-    """Máy chủ thông minh hỗ trợ đồng thời cả HTTP và HTTPS trên cùng 1 cổng."""
+class ThreadingHTTPServer(socketserver.ThreadingTCPServer):
+    """Máy chủ HTTP đa luồng hiệu năng cao."""
     allow_reuse_address = True
     daemon_threads = True
-
-    def __init__(self, server_address, RequestHandlerClass, ssl_context=None):
-        super().__init__(server_address, RequestHandlerClass)
-        self.ssl_context = ssl_context
-
-    def get_request(self):
-        sock, addr = self.socket.accept()
-        try:
-            first_byte = sock.recv(1, socket.MSG_PEEK)
-            if first_byte == b"\x16" and self.ssl_context:
-                sock = self.ssl_context.wrap_socket(sock, server_side=True)
-        except Exception:
-            pass
-        return sock, addr
 
 
 def run():
     os.chdir(DIRECTORY)
-    ensure_ssl_certs()
 
     gen_script = os.path.join(DIRECTORY, "generate_web.py")
     if os.path.exists(gen_script):
@@ -396,23 +381,16 @@ def run():
 
     lan_ip = get_lan_ip()
 
-    ssl_ctx = None
-    if os.path.exists(CERT_FILE) and os.path.exists(KEY_FILE):
-        try:
-            ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            ssl_ctx.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)
-        except Exception as e:
-            print("Cảnh báo SSL Context:", e)
-
     try:
-        with DualProtocolServer(("", PORT), Handler, ssl_context=ssl_ctx) as httpd:
+        with ThreadingHTTPServer(("", PORT), Handler) as httpd:
             print("=" * 65)
-            print("🎉 MÁY CHỦ WEB NỘI BỘ (DUAL HTTP + HTTPS) ĐANG CHẠY!")
+            print("🎉 MÁY CHỦ WEB NỘI BỘ HENTAIVS ĐANG CHẠY!")
             print(f"👉 Trên máy tính:              http://localhost:{PORT}")
-            print(f"👉 Trên điện thoại (HTTP):      http://{lan_ip}:{PORT} (KHUYÊN DÙNG)")
-            print(f"👉 Trên điện thoại (HTTPS):     https://{lan_ip}:{PORT}")
+            print(f"👉 Trên điện thoại (WiFi):      http://{lan_ip}:{PORT}")
             print(f"📁 Thư mục phục vụ:            {DIRECTORY}")
             print("=" * 65)
+            print("Nhấn Ctrl + C để dừng máy chủ")
+            httpd.serve_forever()
             print("Nhấn Ctrl + C để dừng máy chủ")
             httpd.serve_forever()
     except OSError as e:
