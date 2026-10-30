@@ -352,6 +352,9 @@ class AnimeVietSubCrawler:
 
     def save(self, items, base_name="animevietsub"):
         """Lưu dữ liệu ra các định dạng JSON, CSV và TXT."""
+        if not items:
+            print("⚠️ Danh sách anime trống, giữ nguyên dữ liệu hiện tại để tránh mất mát!")
+            return
         os.makedirs(DATA_DIR, exist_ok=True)
         json_path = os.path.join(DATA_DIR, f"{base_name}_data.json")
         csv_path = os.path.join(DATA_DIR, f"{base_name}_data.csv")
